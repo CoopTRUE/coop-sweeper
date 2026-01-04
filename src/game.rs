@@ -1,8 +1,9 @@
 use crate::grid::{Grid, GridLoc, GridSize};
 use crate::message::Message;
 use crate::state::GameState;
+use iced::Alignment;
 use iced::Element;
-use iced::widget::{button, column, grid as iced_grid, mouse_area, text};
+use iced::widget::{button, column, grid as iced_grid, mouse_area, row, text};
 use iced_aw::number_input;
 
 use GameState::*;
@@ -52,13 +53,34 @@ impl App {
         }
     }
     pub fn view(&self) -> Element<'_, Message> {
-        match &self.state {
+        let content: Element<'_, Message> = match &self.state {
             Uninitialized(size, mines) => column![
-                number_input(&size.rows, 0..100, InputRows),
-                number_input(&size.cols, 0..100, InputCols),
-                number_input(mines, 0..100, InputMines),
-                button("Start").on_press(GameStart)
+                text("🎮 Minesweeper").size(32),
+                row![
+                    text("Rows:").width(60),
+                    number_input(&size.rows, 5..50, InputRows).width(100),
+                ]
+                .spacing(10)
+                .align_y(Alignment::Center),
+                row![
+                    text("Cols:").width(60),
+                    number_input(&size.cols, 5..50, InputCols).width(100),
+                ]
+                .spacing(10)
+                .align_y(Alignment::Center),
+                row![
+                    text("Mines:").width(60),
+                    number_input(mines, 1..999, InputMines).width(100),
+                ]
+                .spacing(10)
+                .align_y(Alignment::Center),
+                button("Start Game")
+                    .on_press(GameStart)
+                    .padding(10)
+                    .style(button::success),
             ]
+            .spacing(15)
+            .padding(30)
             .into(),
             Initialized(size, _) => {
                 let buttons = (0..size.rows).flat_map(|row| {
@@ -68,7 +90,7 @@ impl App {
                             .into()
                     })
                 });
-                iced_grid(buttons).columns(size.cols).spacing(10).into()
+                iced_grid(buttons).columns(size.cols).spacing(5).into()
             }
             Started(grid) => {
                 let buttons = (0..grid.rows()).flat_map(|row| {
@@ -81,9 +103,14 @@ impl App {
                         )
                     })
                 });
-                iced_grid(buttons).columns(grid.cols()).spacing(10).into()
+                iced_grid(buttons).columns(grid.cols()).spacing(5).into()
             }
-            Over(_) => text("Over").into(),
-        }
+            Over(_) => column![text("Game Over!").size(32)]
+                .spacing(15)
+                .padding(30)
+                .into(),
+        };
+
+        content
     }
 }

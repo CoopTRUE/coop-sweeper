@@ -1,7 +1,7 @@
 use rand::Rng;
 
 use crate::cell::{Cell, CellType};
-use std::{cmp::min, collections::HashSet};
+use std::{cmp::min, collections::HashSet, fmt};
 
 pub enum CellRevealResult {
     Success,
@@ -30,6 +30,7 @@ pub enum CellChordResult {
 #[derive(Debug)]
 pub struct Grid {
     cells: Vec<Vec<Cell>>,
+    populated: bool,
 }
 
 impl Grid {
@@ -37,6 +38,7 @@ impl Grid {
     pub fn new(size: GridSize) -> Self {
         Self {
             cells: vec![vec![Cell::default(); size.cols]; size.rows],
+            populated: false,
         }
     }
 
@@ -45,6 +47,9 @@ impl Grid {
     }
 
     pub fn populate_mines_with_rng<R: Rng>(&mut self, loc: GridLoc, mines: MinesAmt, rng: &mut R) {
+        if self.populated {
+            panic!("Grid already populated");
+        }
         for _ in 0..mines {
             loop {
                 let x = rng.random_range(0..self.rows());
@@ -264,6 +269,33 @@ impl Grid {
     }
 }
 
+impl fmt::Display for Grid {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (row_index, row) in self.cells.iter().enumerate() {
+            if row_index > 0 {
+                writeln!(f)?;
+            }
+            for (col_index, cell) in row.iter().enumerate() {
+                if col_index > 0 {
+                    write!(f, " ")?;
+                }
+                let neighboring_mines = self.count_neighboring_mines(&GridLoc {
+                    row: row_index,
+                    col: col_index,
+                });
+                write!(
+                    f,
+                    "{}{}",
+                    cell.to_string(neighboring_mines),
+                    if neighboring_mines == 0 { "" } else { " " }
+                )?;
+            }
+            writeln!(f)?;
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone, Default, Debug, PartialEq, Eq, Hash)]
 pub struct GridLoc {
     pub row: usize,
@@ -290,6 +322,8 @@ mod tests {
         let mut rng = ChaCha20Rng::seed_from_u64(6767);
         let mut grid = Grid::new(GridSize { rows: 9, cols: 9 });
         grid.populate_mines_with_rng(GridLoc { row: 4, col: 4 }, 10, &mut rng);
-        println!("{:?}", grid);
+        // grid.populate_mines(GridLoc { row: 4, col: 4 }, 10);
+        grid.reveal_all();
+        println!("{}", grid);
     }
 }
