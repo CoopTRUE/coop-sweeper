@@ -9,4 +9,5 @@ pub enum Message {
     RevealClick(GridLoc),
     ChordClick(GridLoc),
     FlagClick(GridLoc),
+    Quit,
 }

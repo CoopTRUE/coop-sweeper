@@ -89,7 +89,11 @@ impl Grid {
         match cell.cell_type {
             CellType::Hidden => {
                 cell.cell_type = CellType::Revealed;
-                CellRevealResult::Success
+                if cell.is_mine {
+                    CellRevealResult::Mine
+                } else {
+                    CellRevealResult::Success
+                }
             }
             CellType::Revealed => CellRevealResult::AlreadyRevealed,
             CellType::Flagged => CellRevealResult::Flagged,
