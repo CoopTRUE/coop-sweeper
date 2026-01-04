@@ -47,18 +47,18 @@ pub fn count_neighboring_mines(grid: &Grid, row: usize, col: usize) -> u8 {
  * If the cell is a bomb, the function returns `Some(Err(&GridLoc))` containing the coordinates of the bomb (after revealing)
  */
 pub fn reveal_cell<'a>(grid: &'a mut Grid, loc: GridLoc) -> Option<Result<&'a Cell, GridLoc>> {
-    let cell_type = grid
-        .get(loc.row)
-        .and_then(|row| row.get(loc.col))?
-        .cell_type;
+    let cell = grid.get(loc.row).and_then(|row| row.get(loc.col))?;
+    if cell.is_mine {
+        return Some(Err(loc));
+    }
 
-    match cell_type {
+    match cell.cell_type {
         CellType::Hidden => {
             reveal_cell_recursive(grid, &mut HashSet::new(), &loc);
-            grid.get(loc.row).and_then(|row| row.get(loc.col)).map(Ok)
+            Some(Ok(&grid[loc.row][loc.col]))
         }
         CellType::Flagged => None,
-        CellType::Revealed => grid.get(loc.row).and_then(|row| row.get(loc.col)).map(Ok),
+        CellType::Revealed => None,
     }
 }
 
@@ -98,33 +98,53 @@ fn reveal_cell_recursive(grid: &mut Grid, visited: &mut HashSet<GridLoc>, loc: &
     }
 }
 
-// pub fn reveal_surrounding_cells<'a>(grid: &'a mut Grid, loc: &GridLoc) -> Option<&'a Cell> {
-//     let start_r = loc.row.saturating_sub(1);
-//     let end_r = min(grid.len() - 1, loc.row + 1);
-//     let start_c = loc.col.saturating_sub(1);
-//     let end_c = min(grid[0].len() - 1, loc.col + 1);
+/**
+ * Reveals all surrounding cells that aren't already flagged or revealed if permitted, returning `Some(Ok(&Cell))`.
+ *
+ * If the cell is flagged, revealed, or doesn't exist, the function returns `None`.
+ *
+ * If the cell is a bomb, the function returns `Some(Err(&GridLoc))` containing the coordinates of the bomb (after revealing)
+ */
+pub fn reveal_surrounding_cells<'a>(
+    grid: &'a mut Grid,
+    loc: GridLoc,
+) -> Option<Result<&'a Cell, GridLoc>> {
+    let start_r = loc.row.saturating_sub(1);
+    let end_r = min(grid.len() - 1, loc.row + 1);
+    let start_c = loc.col.saturating_sub(1);
+    let end_c = min(grid[0].len() - 1, loc.col + 1);
 
-//     let mut surrounding_flags: u8 = 0;
-//     for r in start_r..=end_r {
-//         for c in start_c..=end_c {
-//             if r == loc.row && c == loc.col {
-//                 continue;
-//             }
-//             let cell = &grid[r][c];
-//             if cell.cell_type == CellType::Flagged {
-//                 surrounding_flags += 1;
-//             }
-//         }
-//     }
+    let mut surrounding_flags: u8 = 0;
+    for r in start_r..=end_r {
+        for c in start_c..=end_c {
+            if r == loc.row && c == loc.col {
+                continue;
+            }
+            let cell = &mut grid[r][c];
+            match cell.cell_type {
+                CellType::Flagged => surrounding_flags += 1,
+                _ => {}
+            }
+        }
+    }
 
-//     let neighboring_mines = count_neighboring_mines(grid, loc.row, loc.col);
-//     if surrounding_flags == neighboring_mines {
-//         for r in start_r..=end_r {
-//             for c in start_c..=end_c {}
-//         }
-//     }
-//     None
-// }
+    let neighboring_mines = count_neighboring_mines(grid, loc.row, loc.col);
+    if surrounding_flags == neighboring_mines {
+        for r in start_r..=end_r {
+            for c in start_c..=end_c {
+                if r == loc.row && c == loc.col {
+                    continue;
+                }
+                let cell = &mut grid[r][c];
+                match cell.cell_type {
+                    CellType::Hidden => cell.cell_type = CellType::Revealed,
+                    _ => {}
+                }
+            }
+        }
+    }
+    None
+}
 
 #[derive(Clone, Default, Debug, PartialEq, Eq, Hash)]
 pub struct GridLoc {

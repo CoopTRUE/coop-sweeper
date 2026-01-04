@@ -1,5 +1,7 @@
 use crate::cell::CellType;
-use crate::grid::{GridLoc, GridSize, count_neighboring_mines, gen_grid, reveal_cell};
+use crate::grid::{
+    GridLoc, GridSize, count_neighboring_mines, gen_grid, reveal_cell, reveal_surrounding_cells,
+};
 use crate::message::Message;
 use crate::state::GameState;
 use iced::Element;
@@ -40,10 +42,10 @@ impl App {
                 }
                 Started(grid)
             }
-            // (RevealSurroundingClick(loc), Started(mut grid)) => {
-            //     reveal_surrounding_cells(&mut grid, &loc);
-            //     Started(grid)
-            // }
+            (RevealSurroundingClick(loc), Started(mut grid)) => {
+                reveal_surrounding_cells(&mut grid, loc);
+                Started(grid)
+            }
             (FlagClick(loc), Started(mut grid)) => {
                 println!("FlagClick: {:?}", loc);
                 let cell = &mut grid[loc.row][loc.col];
@@ -89,6 +91,10 @@ impl App {
                             cell.display(
                                 count_neighboring_mines(&grid, row_idx, col_idx),
                                 RevealClick(GridLoc {
+                                    row: row_idx,
+                                    col: col_idx,
+                                }),
+                                RevealSurroundingClick(GridLoc {
                                     row: row_idx,
                                     col: col_idx,
                                 }),

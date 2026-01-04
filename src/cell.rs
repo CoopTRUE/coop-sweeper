@@ -44,11 +44,15 @@ impl Cell {
         &self,
         neighboring_mines: u8,
         on_reveal: Message,
+        on_reveal_surrounding: Message,
         on_flag: Message,
     ) -> Element<'a, Message> {
         let cell_text = self.to_string(neighboring_mines);
         mouse_area(text(cell_text))
-            .on_press(on_reveal)
+            .on_press(match self.cell_type {
+                CellType::Hidden | CellType::Flagged => on_reveal,
+                CellType::Revealed => on_reveal_surrounding,
+            })
             .on_right_press(on_flag)
             .into()
     }
