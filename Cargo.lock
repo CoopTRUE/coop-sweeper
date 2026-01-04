@@ -512,6 +512,7 @@ dependencies = [
  "iced",
  "iced_aw",
  "rand",
+ "rand_chacha",
 ]
 
 [[package]]

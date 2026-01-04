@@ -1,6 +1,6 @@
 use crate::grid::{Grid, GridSize, MinesAmt};
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum GameState {
     Uninitialized(GridSize, MinesAmt),
     Initialized(GridSize, MinesAmt),

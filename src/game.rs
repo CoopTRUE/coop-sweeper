@@ -1,7 +1,4 @@
-use crate::cell::CellType;
-use crate::grid::{
-    GridLoc, GridSize, count_neighboring_mines, gen_grid, reveal_cell, reveal_surrounding_cells,
-};
+use crate::grid::{Grid, GridLoc, GridSize};
 use crate::message::Message;
 use crate::state::GameState;
 use iced::Element;
@@ -30,27 +27,21 @@ impl App {
             }
             (InputMines(mines), Uninitialized(size, _)) => Uninitialized(size, mines),
             (GameStart, Uninitialized(size, mines)) => Initialized(size, mines),
-            (RevealClick(loc), Initialized(size, mines)) => Started(gen_grid(&size, &loc, mines)),
-            (RevealClick(loc), Started(mut grid)) => {
-                match reveal_cell(&mut grid, loc) {
-                    Some(Ok(_)) => {}
-                    Some(Err(loc)) => println!("Bomb at: {:?}", loc),
-                    None => {}
-                }
+            (RevealClick(loc), Initialized(size, mines)) => {
+                let mut grid = Grid::new(size);
+                grid.populate_mines(loc, mines);
                 Started(grid)
             }
-            (RevealSurroundingClick(loc), Started(mut grid)) => {
-                reveal_surrounding_cells(&mut grid, loc);
+            (RevealClick(loc), Started(mut grid)) => {
+                grid.cascade_reveal(loc);
+                Started(grid)
+            }
+            (ChordClick(loc), Started(mut grid)) => {
+                grid.chord_reveal(loc);
                 Started(grid)
             }
             (FlagClick(loc), Started(mut grid)) => {
-                println!("FlagClick: {:?}", loc);
-                let cell = &mut grid[loc.row][loc.col];
-                match cell.cell_type {
-                    CellType::Hidden => cell.cell_type = CellType::Flagged,
-                    CellType::Flagged => cell.cell_type = CellType::Hidden,
-                    CellType::Revealed => {}
-                }
+                grid.flag_cell(loc);
                 Started(grid)
             }
             (a, b) => {
@@ -80,30 +71,17 @@ impl App {
                 iced_grid(buttons).columns(size.cols).spacing(10).into()
             }
             Started(grid) => {
-                let buttons: Vec<_> = grid
-                    .iter()
-                    .enumerate()
-                    .flat_map(|(row_idx, row)| {
-                        row.iter().enumerate().map(move |(col_idx, cell)| {
-                            cell.display(
-                                count_neighboring_mines(&grid, row_idx, col_idx),
-                                RevealClick(GridLoc {
-                                    row: row_idx,
-                                    col: col_idx,
-                                }),
-                                RevealSurroundingClick(GridLoc {
-                                    row: row_idx,
-                                    col: col_idx,
-                                }),
-                                FlagClick(GridLoc {
-                                    row: row_idx,
-                                    col: col_idx,
-                                }),
-                            )
-                        })
+                let buttons = (0..grid.rows()).flat_map(|row| {
+                    (0..grid.cols()).map(move |col| {
+                        grid.get(row, col).unwrap().display(
+                            grid.count_neighboring_mines(&GridLoc { row, col }),
+                            RevealClick(GridLoc { row, col }),
+                            ChordClick(GridLoc { row, col }),
+                            FlagClick(GridLoc { row, col }),
+                        )
                     })
-                    .collect();
-                iced_grid(buttons).columns(grid[0].len()).spacing(10).into()
+                });
+                iced_grid(buttons).columns(grid.cols()).spacing(10).into()
             }
             Over(_) => text("Over").into(),
         }

@@ -7,6 +7,6 @@ pub enum Message {
     InputMines(usize),
     GameStart,
     RevealClick(GridLoc),
-    RevealSurroundingClick(GridLoc),
+    ChordClick(GridLoc),
     FlagClick(GridLoc),
 }
