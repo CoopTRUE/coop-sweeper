@@ -1,4 +1,7 @@
-use std::fmt;
+use iced::{
+    Element,
+    widget::{mouse_area, text},
+};
 
 #[derive(Debug, Clone, Default, Copy)]
 pub enum CellType {
@@ -23,19 +26,30 @@ impl Default for Cell {
     }
 }
 
-impl fmt::Display for Cell {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.write_str(match self.cell_type {
-            CellType::Hidden => "⬛",
+impl Cell {
+    fn to_string(&self, neighboring_mines: u8) -> String {
+        match self.cell_type {
+            CellType::Hidden => "⬛".to_string(),
             CellType::Revealed => {
                 if self.is_mine {
-                    "💣"
+                    "💣".to_string()
                 } else {
-                    "⬜"
+                    neighboring_mines.to_string()
                 }
             }
-            CellType::Flagged => "🚩",
-        })?;
-        Ok(())
+            CellType::Flagged => "🚩".to_string(),
+        }
+    }
+    pub fn display<'a, Message: 'a + Clone>(
+        &self,
+        neighboring_mines: u8,
+        on_reveal: Message,
+        on_flag: Message,
+    ) -> Element<'a, Message> {
+        let cell_text = self.to_string(neighboring_mines);
+        mouse_area(text(cell_text))
+            .on_press(on_reveal)
+            .on_right_press(on_flag)
+            .into()
     }
 }
