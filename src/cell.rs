@@ -3,7 +3,7 @@ use iced::{
     widget::{mouse_area, text},
 };
 
-#[derive(Debug, Clone, Default, Copy)]
+#[derive(Debug, Clone, Default, Copy, PartialEq)]
 pub enum CellType {
     #[default]
     Hidden,

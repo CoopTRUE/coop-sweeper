@@ -48,12 +48,13 @@ pub fn count_neighboring_mines(grid: &Grid, row: usize, col: usize) -> u8 {
  */
 pub fn reveal_cell<'a>(grid: &'a mut Grid, loc: GridLoc) -> Option<Result<&'a Cell, GridLoc>> {
     let cell = grid.get(loc.row).and_then(|row| row.get(loc.col))?;
-    if cell.is_mine {
-        return Some(Err(loc));
-    }
 
     match cell.cell_type {
         CellType::Hidden => {
+            if cell.is_mine {
+                grid[loc.row][loc.col].cell_type = CellType::Revealed;
+                return Some(Err(loc));
+            }
             reveal_cell_recursive(grid, &mut HashSet::new(), &loc);
             Some(Ok(&grid[loc.row][loc.col]))
         }
@@ -63,7 +64,7 @@ pub fn reveal_cell<'a>(grid: &'a mut Grid, loc: GridLoc) -> Option<Result<&'a Ce
 }
 
 fn reveal_cell_recursive(grid: &mut Grid, visited: &mut HashSet<GridLoc>, loc: &GridLoc) {
-    if visited.contains(loc) || (loc.row, loc.col) >= (grid.len(), grid[0].len()) {
+    if visited.contains(loc) || loc.row >= grid.len() || loc.col >= grid[0].len() {
         return;
     }
 
@@ -74,10 +75,6 @@ fn reveal_cell_recursive(grid: &mut Grid, visited: &mut HashSet<GridLoc>, loc: &
     }
 
     cell.cell_type = CellType::Revealed;
-    if cell.is_mine {
-        return;
-    }
-
     visited.insert(loc.clone());
 
     let neighboring_mines = count_neighboring_mines(grid, loc.row, loc.col);
@@ -137,13 +134,20 @@ pub fn reveal_surrounding_cells<'a>(
                 }
                 let cell = &mut grid[r][c];
                 match cell.cell_type {
-                    CellType::Hidden => cell.cell_type = CellType::Revealed,
+                    CellType::Hidden => {
+                        cell.cell_type = CellType::Revealed;
+                        if cell.is_mine {
+                            return Some(Err(GridLoc { row: r, col: c }));
+                        }
+                    }
                     _ => {}
                 }
             }
         }
+        Some(Ok(&grid[loc.row][loc.col]))
+    } else {
+        None
     }
-    None
 }
 
 #[derive(Clone, Default, Debug, PartialEq, Eq, Hash)]

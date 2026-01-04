@@ -32,13 +32,10 @@ impl App {
             (GameStart, Uninitialized(size, mines)) => Initialized(size, mines),
             (RevealClick(loc), Initialized(size, mines)) => Started(gen_grid(&size, &loc, mines)),
             (RevealClick(loc), Started(mut grid)) => {
-                let cell = &mut grid[loc.row][loc.col];
-                match cell.cell_type {
-                    CellType::Hidden => {
-                        reveal_cell(&mut grid, loc);
-                    }
-                    CellType::Revealed => {}
-                    CellType::Flagged => {}
+                match reveal_cell(&mut grid, loc) {
+                    Some(Ok(_)) => {}
+                    Some(Err(loc)) => println!("Bomb at: {:?}", loc),
+                    None => {}
                 }
                 Started(grid)
             }
