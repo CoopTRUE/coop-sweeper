@@ -40,16 +40,25 @@ pub fn count_neighboring_mines(grid: &Grid, row: usize, col: usize) -> u8 {
 }
 
 /**
- * Reveals a cell and all adjacent cells that are not mines recursively.
+ * If a cell is hidden, reveals it and all adjacent cells that are not mines recursively, returning `Some(Ok(&Cell))`.
  *
- * If the cell is flagged or revealed, the function returns early.
+ * If the cell is flagged, revealed, or doesn't exist, the function returns `None`.
+ *
+ * If the cell is a bomb, the function returns `Some(Err(&GridLoc))` containing the coordinates of the bomb (after revealing)
  */
-pub fn reveal_cell(grid: &mut Grid, loc: &GridLoc) {
-    let cell = &mut grid[loc.row][loc.col];
-    match cell.cell_type {
-        CellType::Hidden => reveal_cell_recursive(grid, &mut HashSet::new(), loc),
-        CellType::Flagged => return,
-        CellType::Revealed => return,
+pub fn reveal_cell<'a>(grid: &'a mut Grid, loc: GridLoc) -> Option<Result<&'a Cell, GridLoc>> {
+    let cell_type = grid
+        .get(loc.row)
+        .and_then(|row| row.get(loc.col))?
+        .cell_type;
+
+    match cell_type {
+        CellType::Hidden => {
+            reveal_cell_recursive(grid, &mut HashSet::new(), &loc);
+            grid.get(loc.row).and_then(|row| row.get(loc.col)).map(Ok)
+        }
+        CellType::Flagged => None,
+        CellType::Revealed => grid.get(loc.row).and_then(|row| row.get(loc.col)).map(Ok),
     }
 }
 
@@ -64,11 +73,11 @@ fn reveal_cell_recursive(grid: &mut Grid, visited: &mut HashSet<GridLoc>, loc: &
         CellType::Hidden => {}
     }
 
+    cell.cell_type = CellType::Revealed;
     if cell.is_mine {
         return;
     }
 
-    cell.cell_type = CellType::Revealed;
     visited.insert(loc.clone());
 
     let neighboring_mines = count_neighboring_mines(grid, loc.row, loc.col);
@@ -89,23 +98,33 @@ fn reveal_cell_recursive(grid: &mut Grid, visited: &mut HashSet<GridLoc>, loc: &
     }
 }
 
-pub fn reveal_surrounding_cells(grid: &mut Grid, loc: &GridLoc) {
-    let neighboring_mines = count_neighboring_mines(grid, loc.row, loc.col);
+// pub fn reveal_surrounding_cells<'a>(grid: &'a mut Grid, loc: &GridLoc) -> Option<&'a Cell> {
+//     let start_r = loc.row.saturating_sub(1);
+//     let end_r = min(grid.len() - 1, loc.row + 1);
+//     let start_c = loc.col.saturating_sub(1);
+//     let end_c = min(grid[0].len() - 1, loc.col + 1);
 
-    let start_r = loc.row.saturating_sub(1);
-    let end_r = min(grid.len() - 1, loc.row + 1);
-    let start_c = loc.col.saturating_sub(1);
-    let end_c = min(grid[0].len() - 1, loc.col + 1);
+//     let mut surrounding_flags: u8 = 0;
+//     for r in start_r..=end_r {
+//         for c in start_c..=end_c {
+//             if r == loc.row && c == loc.col {
+//                 continue;
+//             }
+//             let cell = &grid[r][c];
+//             if cell.cell_type == CellType::Flagged {
+//                 surrounding_flags += 1;
+//             }
+//         }
+//     }
 
-    for r in start_r..=end_r {
-        for c in start_c..=end_c {
-            if r == loc.row && c == loc.col {
-                continue;
-            }
-            reveal_cell(grid, &GridLoc { row: r, col: c });
-        }
-    }
-}
+//     let neighboring_mines = count_neighboring_mines(grid, loc.row, loc.col);
+//     if surrounding_flags == neighboring_mines {
+//         for r in start_r..=end_r {
+//             for c in start_c..=end_c {}
+//         }
+//     }
+//     None
+// }
 
 #[derive(Clone, Default, Debug, PartialEq, Eq, Hash)]
 pub struct GridLoc {

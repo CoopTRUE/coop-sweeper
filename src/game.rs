@@ -1,7 +1,5 @@
 use crate::cell::CellType;
-use crate::grid::{
-    GridLoc, GridSize, count_neighboring_mines, gen_grid, reveal_cell, reveal_surrounding_cells,
-};
+use crate::grid::{GridLoc, GridSize, count_neighboring_mines, gen_grid, reveal_cell};
 use crate::message::Message;
 use crate::state::GameState;
 use iced::Element;
@@ -34,16 +32,18 @@ impl App {
             (RevealClick(loc), Started(mut grid)) => {
                 let cell = &mut grid[loc.row][loc.col];
                 match cell.cell_type {
-                    CellType::Hidden => reveal_cell(&mut grid, &loc),
+                    CellType::Hidden => {
+                        reveal_cell(&mut grid, loc);
+                    }
                     CellType::Revealed => {}
                     CellType::Flagged => {}
                 }
                 Started(grid)
             }
-            (RevealSurroundingClick(loc), Started(mut grid)) => {
-                reveal_surrounding_cells(&mut grid, &loc);
-                Started(grid)
-            }
+            // (RevealSurroundingClick(loc), Started(mut grid)) => {
+            //     reveal_surrounding_cells(&mut grid, &loc);
+            //     Started(grid)
+            // }
             (FlagClick(loc), Started(mut grid)) => {
                 println!("FlagClick: {:?}", loc);
                 let cell = &mut grid[loc.row][loc.col];
