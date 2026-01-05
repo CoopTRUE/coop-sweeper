@@ -92,6 +92,7 @@ jobs:
             if [[ "$target" == *"windows"* ]]; then
               zip -j "release/${target}.zip" "$dir"/*
             else
+              chmod +x "$dir"/*
               tar -czvf "release/${target}.tar.gz" -C "$dir" .
             fi
           done
