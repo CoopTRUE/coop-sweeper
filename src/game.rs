@@ -1,34 +1,47 @@
+use std::str::FromStr;
+
 use crate::cell::Cell;
-use crate::grid::{CellChordResult, CellRevealResult, Grid, GridLoc};
+use crate::elements::header;
+use crate::grid::{CellChordResult, CellRevealResult, Grid, GridLoc, GridSize};
 use crate::message::Message;
 use crate::state::GameState;
-use iced::Element;
+use crate::theme::{PRIMARY_COLOR, TEXT_COLOR};
 use iced::widget::{button, column, container, grid as iced_grid, row, stack, text};
-use iced::{Alignment, Border, Color, Length};
+use iced::{Alignment, Background, Border, Color, Length};
+use iced::{Element, Task};
 use iced_aw::number_input;
 
 use GameState::*;
 use Message::*;
+use iced_aw::style::colors::CORNFLOWER_BLUE;
 
-#[derive(Default)]
 pub struct App {
     state: GameState,
 }
 
+impl Default for App {
+    fn default() -> Self {
+        Self {
+            state: GameState::DEFAULT_DIFF,
+        }
+    }
+}
+
 impl App {
-    pub fn update(&mut self, message: Message) -> iced::Task<Message> {
+    pub fn update(&mut self, message: Message) -> Task<Message> {
         let state = std::mem::take(&mut self.state);
         self.state = match (message, state) {
-            (InputRows(rows), Uninitialized(mut size, mines)) => {
+            (GameNew, _) => GameState::DIFF_EASY,
+            (InputRows(rows), CreationScreen(mut size, mines)) => {
                 size.rows = rows;
-                Uninitialized(size, mines)
+                CreationScreen(size, mines)
             }
-            (InputCols(cols), Uninitialized(mut size, mines)) => {
+            (InputCols(cols), CreationScreen(mut size, mines)) => {
                 size.cols = cols;
-                Uninitialized(size, mines)
+                CreationScreen(size, mines)
             }
-            (InputMines(mines), Uninitialized(size, _)) => Uninitialized(size, mines),
-            (GameStart, Uninitialized(size, mines)) => Initialized(size, mines),
+            (InputMines(mines), CreationScreen(size, _)) => CreationScreen(size, mines),
+            (GameStart, CreationScreen(size, mines)) => Initialized(size, mines),
             (RevealClick(loc), Initialized(size, mines)) => {
                 let mut grid = Grid::new(size);
                 // use rand::SeedableRng;
@@ -53,49 +66,77 @@ impl App {
             (Quit, _) => {
                 std::process::exit(0);
             }
+            (NoOp, state) => state,
             (message, state) => {
                 unreachable!("Unhandled message: {:?}, {:?}", message, state);
             }
         };
-        iced::Task::none()
+        Task::none()
     }
     pub fn view(&self) -> Element<'_, Message> {
         let content: Element<'_, Message> = match &self.state {
-            Uninitialized(size, mines) => column![
-                text("🎮 Minesweeper").size(32),
-                row![
-                    text("Rows:").width(60),
-                    number_input(&size.rows, 5..50, InputRows).width(100),
-                ]
-                .spacing(10)
-                .align_y(Alignment::Center),
-                row![
-                    text("Cols:").width(60),
-                    number_input(&size.cols, 5..50, InputCols).width(100),
-                ]
-                .spacing(10)
-                .align_y(Alignment::Center),
-                row![
-                    text("Mines:").width(60),
-                    number_input(mines, 1..999, InputMines).width(100),
-                ]
-                .spacing(10)
-                .align_y(Alignment::Center),
-                row![
-                    button("Start Game")
-                        .on_press(GameStart)
-                        .padding(10)
-                        .style(button::success),
-                    button("Quit")
-                        .on_press(Quit)
-                        .padding(10)
-                        .style(button::danger),
-                ]
-                .spacing(10),
-            ]
-            .spacing(15)
-            .padding(30)
-            .into(),
+            HomeScreen => {
+                let cells = (0..9)
+                    .flat_map(|_| (0..9).map(|_| (Cell::default()).display(0, NoOp, NoOp, NoOp)));
+                iced_grid(cells).columns(9).spacing(5).into()
+            }
+            CreationScreen(size, mines) => {
+                let cells = (0..size.rows).flat_map(|_| {
+                    (0..size.cols).map(|_| (Cell::default()).display(0, NoOp, NoOp, NoOp))
+                });
+                let grid_view = iced_grid(cells).columns(size.cols).spacing(5);
+
+                let overlay = container(
+                    column![
+                        text("🎮 Minesweeper").size(32),
+                        row![
+                            text("Rows:").width(60),
+                            number_input(&size.rows, 5..50, InputRows).width(100),
+                        ]
+                        .spacing(10)
+                        .align_y(Alignment::Center),
+                        row![
+                            text("Cols:").width(60),
+                            number_input(&size.cols, 5..50, InputCols).width(100),
+                        ]
+                        .spacing(10)
+                        .align_y(Alignment::Center),
+                        row![
+                            text("Mines:").width(60),
+                            number_input(mines, 1..999, InputMines).width(100),
+                        ]
+                        .spacing(10)
+                        .align_y(Alignment::Center),
+                        row![
+                            button("Start Game")
+                                .on_press(GameStart)
+                                .padding(10)
+                                .style(button::success),
+                            button("Quit")
+                                .on_press(Quit)
+                                .padding(10)
+                                .style(button::danger),
+                        ]
+                        .spacing(10),
+                    ]
+                    .spacing(15)
+                    .padding(30)
+                    .align_x(Alignment::Center),
+                )
+                .center_x(Length::Fill)
+                .center_y(Length::Fill)
+                .style(|_theme| container::Style {
+                    background: Some(Background::Color(Color {
+                        a: 0.8,
+                        ..Default::default()
+                    })),
+                    text_color: Some(Color::WHITE),
+                    border: Border::default(),
+                    ..Default::default()
+                });
+
+                stack![grid_view, overlay].into()
+            }
             Initialized(size, _) => {
                 let buttons = (0..size.rows).flat_map(|row| {
                     (0..size.cols).map(move |col| {
@@ -168,7 +209,7 @@ impl App {
                 .center_x(Length::Fill)
                 .center_y(Length::Fill)
                 .style(|_theme| container::Style {
-                    background: Some(iced::Background::Color(Color {
+                    background: Some(Background::Color(Color {
                         a: 0.7,
                         ..Default::default()
                     })),
@@ -181,6 +222,14 @@ impl App {
             }
         };
 
-        content
+        container(column![header(), content])
+            .style(|_theme| container::Style {
+                background: Some(iced::Background::Color(CORNFLOWER_BLUE)),
+                text_color: Some(TEXT_COLOR),
+                ..Default::default()
+            })
+            .center(Length::Fill)
+            .padding(20)
+            .into()
     }
 }
