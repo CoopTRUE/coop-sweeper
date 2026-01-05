@@ -5,9 +5,9 @@ use crate::elements::header;
 use crate::grid::{CellChordResult, CellRevealResult, Grid, GridLoc, GridSize};
 use crate::message::Message;
 use crate::state::GameState;
-use crate::theme::{PRIMARY_COLOR, TEXT_COLOR};
+use crate::theme::*;
 use iced::widget::{button, column, container, grid as iced_grid, row, stack, text};
-use iced::{Alignment, Background, Border, Color, Length};
+use iced::{Alignment, Background, Border, Color, Length, color};
 use iced::{Element, Task};
 use iced_aw::number_input;
 
@@ -74,7 +74,7 @@ impl App {
         Task::none()
     }
     pub fn view(&self) -> Element<'_, Message> {
-        let content: Element<'_, Message> = match &self.state {
+        let grid_inner: Element<'_, Message> = match &self.state {
             HomeScreen => {
                 let cells = (0..9)
                     .flat_map(|_| (0..9).map(|_| (Cell::default()).display(0, NoOp, NoOp, NoOp)));
@@ -84,7 +84,7 @@ impl App {
                 let cells = (0..size.rows).flat_map(|_| {
                     (0..size.cols).map(|_| (Cell::default()).display(0, NoOp, NoOp, NoOp))
                 });
-                let grid_view = iced_grid(cells).columns(size.cols).spacing(5);
+                let grid_view = iced_grid(cells).columns(size.cols);
 
                 let overlay = container(
                     column![
@@ -148,16 +148,7 @@ impl App {
                         )
                     })
                 });
-                column![
-                    iced_grid(buttons).columns(size.cols).spacing(5),
-                    button("Quit")
-                        .on_press(Quit)
-                        .padding(10)
-                        .style(button::danger),
-                ]
-                .spacing(10)
-                .align_x(Alignment::Center)
-                .into()
+                iced_grid(buttons).columns(size.cols).into()
             }
             Started(grid) => {
                 let buttons = (0..grid.rows()).flat_map(|row| {
@@ -170,16 +161,7 @@ impl App {
                         )
                     })
                 });
-                column![
-                    iced_grid(buttons).columns(grid.cols()).spacing(5),
-                    button("Quit")
-                        .on_press(Quit)
-                        .padding(10)
-                        .style(button::danger),
-                ]
-                .spacing(10)
-                .align_x(Alignment::Center)
-                .into()
+                iced_grid(buttons).columns(grid.cols()).into()
             }
             Over(grid) => {
                 let buttons = (0..grid.rows()).flat_map(|row| {
@@ -192,7 +174,7 @@ impl App {
                         )
                     })
                 });
-                let grid_view = iced_grid(buttons).columns(grid.cols()).spacing(5);
+                let grid_view = iced_grid(buttons).columns(grid.cols());
 
                 let overlay = container(
                     column![
@@ -221,10 +203,16 @@ impl App {
                 stack![grid_view, overlay].into()
             }
         };
-
-        container(column![header(), content])
+        let grid = container(grid_inner)
+            .padding(20)
+            .center_y(Length::Fill)
             .style(|_theme| container::Style {
-                background: Some(iced::Background::Color(CORNFLOWER_BLUE)),
+                background: Some(GRID_CONTAINER_BACKGROUND_COLOR),
+                ..Default::default()
+            });
+        container(column![header(), grid])
+            .style(|_theme| container::Style {
+                background: Some(BACKGROUND_COLOR),
                 text_color: Some(TEXT_COLOR),
                 ..Default::default()
             })

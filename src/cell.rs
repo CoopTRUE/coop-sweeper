@@ -3,6 +3,8 @@ use iced::{
     widget::{container, mouse_area, text},
 };
 
+use crate::theme::*;
+
 const DIGIT_LOOKUP: [&str; 9] = ["0", "1", "2", "3", "4", "5", "6", "7", "8"];
 
 #[derive(Debug, Clone, Default, Copy)]
@@ -68,7 +70,7 @@ impl Cell {
                             5 => Color::from_rgb(0.5, 0.0, 0.0), // Dark red
                             6 => Color::from_rgb(0.0, 0.5, 0.5), // Cyan
                             7 => Color::from_rgb(0.0, 0.0, 0.0), // Black
-                            _ => Color::from_rgb(0.5, 0.5, 0.5), // Gray
+                            _ => unreachable!("Invalid neighboring mines: {}", neighboring_mines),
                         },
                     )
                 }
@@ -78,32 +80,22 @@ impl Cell {
         let cell_type = self.cell_type;
 
         let (bg_color, border_color) = match cell_type {
-            CellType::Hidden => (
-                Color::from_rgb(0.4, 0.4, 0.4),
-                Color::from_rgb(0.6, 0.6, 0.6),
-            ),
-            CellType::Revealed => (
-                Color::from_rgb(0.9, 0.9, 0.9),
-                Color::from_rgb(0.7, 0.7, 0.7),
-            ),
-            CellType::Flagged => (
-                Color::from_rgb(0.5, 0.3, 0.1),
-                Color::from_rgb(0.6, 0.6, 0.6),
-            ),
+            CellType::Hidden => (CELL_COLOR, Color::from_rgb(0.6, 0.6, 0.6)),
+            CellType::Revealed => (PRIMARY_COLOR, Color::from_rgb(0.7, 0.7, 0.7)),
+            CellType::Flagged => (CELL_COLOR, Color::from_rgb(0.6, 0.6, 0.6)),
         };
 
         let cell_container = container(text(cell_text).color(text_color).size(18))
             // .width(Length::Fixed(32.0))
             // .height(Length::Fixed(32.0))
-            .center_x(Length::Fill)
-            .center_y(Length::Fill)
+            .center(Length::Fill)
             .style(move |_theme| container::Style {
-                background: Some(iced::Background::Color(bg_color)),
+                background: Some(bg_color.into()),
                 text_color: Some(text_color),
                 border: Border {
                     color: border_color,
                     width: 1.0,
-                    radius: 4.0.into(),
+                    radius: 0.into(),
                 },
                 ..Default::default()
             });
