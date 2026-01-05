@@ -1,7 +1,4 @@
-use iced::{
-    Background, Border, Color, Theme, color,
-    theme::{Palette, palette::EXTENDED_CATPPUCCIN_LATTE},
-};
+use iced::{Background, Color, color};
 
 pub const PRIMARY_COLOR: Color = color!(74, 74, 74);
 pub const BACKGROUND_COLOR: Background = Background::Color(PRIMARY_COLOR);

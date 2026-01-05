@@ -1,15 +1,14 @@
-use core::fmt;
-use std::str::FromStr;
-
-use crate::cell::Cell;
-use crate::elements::header;
-use crate::grid::{CellChordResult, CellRevealResult, Grid, GridLoc, GridSize};
-use crate::message::Message;
-use crate::state::GameState;
-use crate::theme::*;
-use iced::widget::{button, column, container, grid as iced_grid, image, row, stack, text};
-use iced::{Alignment, Background, Border, Color, Length, color};
-use iced::{Element, Task};
+use crate::{
+    assets::Face,
+    cell::Cell,
+    elements::header,
+    grid::{CellChordResult, CellRevealResult, Grid, GridLoc},
+    message::Message,
+    state::GameState,
+    theme::*,
+};
+use iced::widget::{button, column, container, grid as iced_grid, mouse_area, row, stack, text};
+use iced::{Alignment, Background, Border, Color, Element, Length, Task};
 use iced_aw::number_input;
 
 use GameState::*;
@@ -38,8 +37,9 @@ impl ClickMode {
 }
 
 pub struct App {
-    state: GameState,
-    click_mode: ClickMode,
+    pub state: GameState,
+    pub click_mode: ClickMode,
+    pub face: Face,
 }
 
 impl Default for App {
@@ -47,6 +47,7 @@ impl Default for App {
         Self {
             state: GameState::DEFAULT_DIFF,
             click_mode: ClickMode::default(),
+            face: Face::default(),
         }
     }
 }
@@ -55,6 +56,16 @@ impl App {
     pub fn update(&mut self, message: Message) -> Task<Message> {
         let state = std::mem::take(&mut self.state);
         self.state = match (message, state) {
+            // (FaceHold, state) => {
+            //     self.face = Face::Surprised;
+            //     println!("FaceHold");
+            //     state
+            // }
+            (ClickRelease, state) => {
+                self.face = Face::Happy;
+                println!("FaceRelease");
+                state
+            }
             (GameNew, _) => GameState::DIFF_EASY,
             (ClickModeToggle, state) => {
                 self.click_mode.toggle();
@@ -71,6 +82,7 @@ impl App {
             (InputMines(mines), CreationScreen(size, _)) => CreationScreen(size, mines),
             (GameStart, CreationScreen(size, mines)) => Initialized(size, mines),
             (RevealClick(loc), Initialized(size, mines)) => {
+                self.face = Face::Surprised;
                 let mut grid = Grid::new(size);
                 // use rand::SeedableRng;
                 // use rand_chacha::ChaCha20Rng;
@@ -79,14 +91,20 @@ impl App {
                 grid.populate_mines(loc, mines);
                 Started(grid)
             }
-            (RevealClick(loc), Started(mut grid)) => match grid.cascade_reveal(loc) {
-                CellRevealResult::Mine => Over(grid),
-                _ => Started(grid),
-            },
-            (ChordClick(loc), Started(mut grid)) => match grid.chord_reveal(loc) {
-                CellChordResult::Mines(_mines) => Over(grid),
-                _ => Started(grid),
-            },
+            (RevealClick(loc), Started(mut grid)) => {
+                self.face = Face::Surprised;
+                match grid.cascade_reveal(loc) {
+                    CellRevealResult::Mine => Over(grid),
+                    _ => Started(grid),
+                }
+            }
+            (ChordClick(loc), Started(mut grid)) => {
+                self.face = Face::Surprised;
+                match grid.chord_reveal(loc) {
+                    CellChordResult::Mines(_mines) => Over(grid),
+                    _ => Started(grid),
+                }
+            }
             (FlagClick(loc), Started(mut grid)) => {
                 grid.flag_cell(loc);
                 Started(grid)
@@ -188,12 +206,7 @@ impl App {
                         )
                     })
                 });
-                // iced_grid(buttons).columns(size.cols).into()
-                image("assets/1.png")
-                    .width(Length::Fixed(16.0 * 3.0))
-                    .height(Length::Fixed(16.0 * 3.0))
-                    .filter_method(image::FilterMethod::Nearest)
-                    .into()
+                iced_grid(buttons).columns(size.cols).into()
             }
             Started(grid) => {
                 let buttons = (0..grid.rows()).flat_map(|row| {
@@ -255,7 +268,7 @@ impl App {
                 background: Some(GRID_CONTAINER_BACKGROUND_COLOR),
                 ..Default::default()
             });
-        container(column![header(self.click_mode), grid])
+        container(column![header(&self), grid])
             .style(|_theme| container::Style {
                 background: Some(BACKGROUND_COLOR),
                 text_color: Some(TEXT_COLOR),

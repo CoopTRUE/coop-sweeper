@@ -1,27 +1,15 @@
 use iced::{
-    Alignment, Element, Length, Shadow, Vector, color,
-    widget::{button, button::Style, container, row},
+    Alignment, Element, Length,
+    widget::{button, container, mouse_area, row},
 };
 
-use crate::{game::ClickMode, message::Message};
+use crate::{assets::*, game::App, message::Message};
 
-pub fn header(click_mode: ClickMode) -> Element<'static, Message> {
+pub fn header(app: &App) -> Element<'static, Message> {
     container(
         row![
-            button(click_mode.to_string()).on_press(Message::ClickModeToggle),
-            button("new game")
-                .on_press(Message::GameNew)
-                .style(|_theme, _status| {
-                    Style {
-                        shadow: Shadow {
-                            color: color!(0, 0, 0, 0.35),
-                            offset: Vector::new(2.0, 2.0),
-                            blur_radius: 0.0,
-                        },
-                        ..Style::default()
-                    }
-                }),
-            "world"
+            button(app.click_mode.to_string()).on_press(Message::ClickModeToggle),
+            mouse_area(get_face_image(app.face).width(40).height(40)).on_press(Message::GameNew)
         ]
         .spacing(10)
         .align_y(Alignment::Center),
