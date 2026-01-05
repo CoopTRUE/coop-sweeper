@@ -48,7 +48,7 @@ impl Grid {
 
     pub fn populate_mines_with_rng<R: Rng>(&mut self, loc: GridLoc, mines: MinesAmt, rng: &mut R) {
         if self.populated {
-            panic!("Grid already populated");
+            unreachable!("Grid already populated");
         }
         for _ in 0..mines {
             loop {

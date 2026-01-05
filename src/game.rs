@@ -54,7 +54,7 @@ impl App {
                 std::process::exit(0);
             }
             (message, state) => {
-                panic!("Unhandled message: {:?}, {:?}", message, state);
+                unreachable!("Unhandled message: {:?}, {:?}", message, state);
             }
         };
         iced::Task::none()
