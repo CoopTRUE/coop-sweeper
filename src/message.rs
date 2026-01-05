@@ -8,6 +8,7 @@ pub enum Message {
     InputMines(usize),
     GameNew,
     GameStart,
+    ClickModeToggle,
     RevealClick(GridLoc),
     ChordClick(GridLoc),
     FlagClick(GridLoc),

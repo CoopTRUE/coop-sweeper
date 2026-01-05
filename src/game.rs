@@ -1,3 +1,4 @@
+use core::fmt;
 use std::str::FromStr;
 
 use crate::cell::Cell;
@@ -13,16 +14,39 @@ use iced_aw::number_input;
 
 use GameState::*;
 use Message::*;
-use iced_aw::style::colors::CORNFLOWER_BLUE;
+
+#[derive(Debug, Default, Clone, Copy)]
+pub enum ClickMode {
+    #[default]
+    Reveal,
+    Flag,
+}
+
+impl ClickMode {
+    pub fn toggle(&mut self) {
+        *self = match self {
+            ClickMode::Reveal => ClickMode::Flag,
+            ClickMode::Flag => ClickMode::Reveal,
+        };
+    }
+    pub fn to_string(&self) -> &'static str {
+        match self {
+            ClickMode::Reveal => "Normal Mode",
+            ClickMode::Flag => "Flag Mode",
+        }
+    }
+}
 
 pub struct App {
     state: GameState,
+    click_mode: ClickMode,
 }
 
 impl Default for App {
     fn default() -> Self {
         Self {
             state: GameState::DEFAULT_DIFF,
+            click_mode: ClickMode::default(),
         }
     }
 }
@@ -32,6 +56,10 @@ impl App {
         let state = std::mem::take(&mut self.state);
         self.state = match (message, state) {
             (GameNew, _) => GameState::DIFF_EASY,
+            (ClickModeToggle, state) => {
+                self.click_mode.toggle();
+                state
+            }
             (InputRows(rows), CreationScreen(mut size, mines)) => {
                 size.rows = rows;
                 CreationScreen(size, mines)
@@ -73,6 +101,18 @@ impl App {
         };
         Task::none()
     }
+    fn create_message_handler(&self, message: Message) -> Message {
+        match self.click_mode {
+            ClickMode::Reveal => message,
+            ClickMode::Flag => match message {
+                RevealClick(loc) => FlagClick(loc),
+                FlagClick(loc) => RevealClick(loc),
+                ChordClick(loc) => ChordClick(loc),
+                _ => unreachable!("Unhandled message: {:?}", message),
+            },
+        }
+    }
+
     pub fn view(&self) -> Element<'_, Message> {
         let grid_inner: Element<'_, Message> = match &self.state {
             HomeScreen => {
@@ -155,9 +195,9 @@ impl App {
                     (0..grid.cols()).map(move |col| {
                         grid.get(row, col).unwrap().display(
                             grid.count_neighboring_mines(GridLoc { row, col }),
-                            RevealClick(GridLoc { row, col }),
-                            ChordClick(GridLoc { row, col }),
-                            FlagClick(GridLoc { row, col }),
+                            self.create_message_handler(RevealClick(GridLoc { row, col })),
+                            self.create_message_handler(ChordClick(GridLoc { row, col })),
+                            self.create_message_handler(FlagClick(GridLoc { row, col })),
                         )
                     })
                 });
@@ -168,9 +208,9 @@ impl App {
                     (0..grid.cols()).map(move |col| {
                         grid.get(row, col).unwrap().display(
                             grid.count_neighboring_mines(GridLoc { row, col }),
-                            Quit,
-                            Quit,
-                            Quit,
+                            NoOp,
+                            NoOp,
+                            NoOp,
                         )
                     })
                 });
@@ -210,7 +250,7 @@ impl App {
                 background: Some(GRID_CONTAINER_BACKGROUND_COLOR),
                 ..Default::default()
             });
-        container(column![header(), grid])
+        container(column![header(self.click_mode), grid])
             .style(|_theme| container::Style {
                 background: Some(BACKGROUND_COLOR),
                 text_color: Some(TEXT_COLOR),

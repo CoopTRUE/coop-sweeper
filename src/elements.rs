@@ -3,12 +3,12 @@ use iced::{
     widget::{button, container, row},
 };
 
-use crate::message::Message;
+use crate::{game::ClickMode, message::Message};
 
-pub fn header() -> Element<'static, Message> {
+pub fn header(click_mode: ClickMode) -> Element<'static, Message> {
     container(
         row![
-            "hello",
+            button(click_mode.to_string()).on_press(Message::ClickModeToggle),
             button("new game").on_press(Message::GameNew),
             "world"
         ]
