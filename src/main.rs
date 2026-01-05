@@ -1,3 +1,4 @@
+mod assets;
 mod cell;
 mod elements;
 mod game;

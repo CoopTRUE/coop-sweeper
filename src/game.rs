@@ -7,7 +7,7 @@ use crate::grid::{CellChordResult, CellRevealResult, Grid, GridLoc, GridSize};
 use crate::message::Message;
 use crate::state::GameState;
 use crate::theme::*;
-use iced::widget::{button, column, container, grid as iced_grid, row, stack, text};
+use iced::widget::{button, column, container, grid as iced_grid, image, row, stack, text};
 use iced::{Alignment, Background, Border, Color, Length, color};
 use iced::{Element, Task};
 use iced_aw::number_input;
@@ -188,7 +188,12 @@ impl App {
                         )
                     })
                 });
-                iced_grid(buttons).columns(size.cols).into()
+                // iced_grid(buttons).columns(size.cols).into()
+                image("assets/1.png")
+                    .width(Length::Fixed(16.0 * 3.0))
+                    .height(Length::Fixed(16.0 * 3.0))
+                    .filter_method(image::FilterMethod::Nearest)
+                    .into()
             }
             Started(grid) => {
                 let buttons = (0..grid.rows()).flat_map(|row| {
