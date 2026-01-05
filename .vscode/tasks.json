@@ -1,0 +1,71 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run App",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "run"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": [
+                "$rustc"
+            ]
+        },
+        {
+            "label": "Run App (Release)",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "run",
+                "--release"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": [
+                "$rustc"
+            ]
+        },
+        {
+            "label": "Build",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "build"
+            ],
+            "group": "build",
+            "presentation": {
+                "reveal": "silent"
+            },
+            "problemMatcher": [
+                "$rustc"
+            ]
+        },
+        {
+            "label": "Check",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "check"
+            ],
+            "group": "test",
+            "presentation": {
+                "reveal": "silent"
+            },
+            "problemMatcher": [
+                "$rustc"
+            ]
+        }
+    ]
+}

@@ -207,7 +207,7 @@ impl Grid {
         let neighbor_locs: Vec<_> = self.neighbors(loc).collect();
         let mut mines_hit = Vec::new();
         for neighbor in neighbor_locs {
-            if matches!(self.reveal_cell(neighbor), CellRevealResult::Mine) {
+            if matches!(self.cascade_reveal(neighbor), CellRevealResult::Mine) {
                 mines_hit.push(neighbor);
             }
         }

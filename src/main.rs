@@ -1,11 +1,17 @@
+mod assets;
 mod cell;
+mod elements;
 mod game;
 mod grid;
 mod message;
 mod state;
+mod theme;
 
 use crate::game::App;
 
 pub fn main() -> iced::Result {
-    iced::application(App::default, App::update, App::view).run()
+    iced::application(App::default, App::update, App::view)
+        // .theme(theme::theme)
+        .window_size((500, 700))
+        .run()
 }
