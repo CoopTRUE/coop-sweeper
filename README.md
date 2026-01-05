@@ -5,7 +5,7 @@ A minesweeper game built in Rust using the [Iced](https://iced.rs/) GUI framewor
 
 ## Download
 
-**[⬇️ Latest Release from GitHub Actions](https://github.com/CoopTRUE/coop-sweeper/actions/workflows/build.yml)**
+**[⬇️ Latest Release from GitHub Actions](https://github.com/CoopTRUE/coop-sweeper/releases/tag/latest)**
 
 | Platform | File |
 |----------|------|
