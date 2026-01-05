@@ -68,3 +68,44 @@ jobs:
           name: coop-sweeper-${{ matrix.target }}
           path: |
             target/${{ matrix.target }}/release/coop-sweeper${{ matrix.os == 'windows-latest' && '.exe' || '' }}
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Package releases
+        run: |
+          mkdir -p release
+          for dir in artifacts/*/; do
+            target=$(basename "$dir")
+            if [[ "$target" == *"windows"* ]]; then
+              zip -j "release/${target}.zip" "$dir"/*
+            else
+              tar -czvf "release/${target}.tar.gz" -C "$dir" .
+            fi
+          done
+
+      - name: Delete existing latest release
+        run: gh release delete latest --yes || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create release
+        run: |
+          gh release create latest release/* \
+            --title "Latest Build (${GITHUB_SHA::7})" \
+            --notes "Automated build from commit ${GITHUB_SHA}" \
+            --prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
