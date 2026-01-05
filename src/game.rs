@@ -1,5 +1,5 @@
 use crate::cell::Cell;
-use crate::grid::{CellChordResult, CellRevealResult, Grid, GridLoc, GridSize};
+use crate::grid::{CellChordResult, CellRevealResult, Grid, GridLoc};
 use crate::message::Message;
 use crate::state::GameState;
 use iced::Element;
@@ -17,7 +17,7 @@ pub struct App {
 
 impl App {
     pub fn update(&mut self, message: Message) -> iced::Task<Message> {
-        let state = std::mem::replace(&mut self.state, Uninitialized(GridSize::default(), 0));
+        let state = std::mem::take(&mut self.state);
         self.state = match (message, state) {
             (InputRows(rows), Uninitialized(mut size, mines)) => {
                 size.rows = rows;
@@ -122,7 +122,7 @@ impl App {
                 let buttons = (0..grid.rows()).flat_map(|row| {
                     (0..grid.cols()).map(move |col| {
                         grid.get(row, col).unwrap().display(
-                            grid.count_neighboring_mines(&GridLoc { row, col }),
+                            grid.count_neighboring_mines(GridLoc { row, col }),
                             RevealClick(GridLoc { row, col }),
                             ChordClick(GridLoc { row, col }),
                             FlagClick(GridLoc { row, col }),
@@ -144,7 +144,7 @@ impl App {
                 let buttons = (0..grid.rows()).flat_map(|row| {
                     (0..grid.cols()).map(move |col| {
                         grid.get(row, col).unwrap().display(
-                            grid.count_neighboring_mines(&GridLoc { row, col }),
+                            grid.count_neighboring_mines(GridLoc { row, col }),
                             Quit,
                             Quit,
                             Quit,

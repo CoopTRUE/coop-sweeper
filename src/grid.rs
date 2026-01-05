@@ -81,6 +81,24 @@ impl Grid {
         self.cells.get_mut(row)?.get_mut(col)
     }
 
+    /// Returns an iterator over all neighboring cell locations (excluding the center).
+    fn neighbors(&self, loc: GridLoc) -> impl Iterator<Item = GridLoc> {
+        let start_r = loc.row.saturating_sub(1);
+        let end_r = min(self.rows() - 1, loc.row + 1);
+        let start_c = loc.col.saturating_sub(1);
+        let end_c = min(self.cols() - 1, loc.col + 1);
+
+        (start_r..=end_r).flat_map(move |r| {
+            (start_c..=end_c).filter_map(move |c| {
+                if r == loc.row && c == loc.col {
+                    None
+                } else {
+                    Some(GridLoc { row: r, col: c })
+                }
+            })
+        })
+    }
+
     // Mutators
     fn reveal_cell(&mut self, loc: GridLoc) -> CellRevealResult {
         let Some(cell) = self.get_mut(loc.row, loc.col) else {
@@ -151,22 +169,13 @@ impl Grid {
             return CellRevealResult::Mine;
         }
 
-        visited.insert(loc.clone());
+        visited.insert(*loc);
 
-        let neighboring_mines = self.count_neighboring_mines(loc);
+        let neighboring_mines = self.count_neighboring_mines(*loc);
         if neighboring_mines == 0 {
-            let start_r = loc.row.saturating_sub(1);
-            let end_r = min(self.rows() - 1, loc.row + 1);
-            let start_c = loc.col.saturating_sub(1);
-            let end_c = min(self.cols() - 1, loc.col + 1);
-
-            for r in start_r..=end_r {
-                for c in start_c..=end_c {
-                    if r == loc.row && c == loc.col {
-                        continue;
-                    }
-                    self.cascade_reveal_recursive(&GridLoc { row: r, col: c }, visited);
-                }
+            let neighbor_locs: Vec<_> = self.neighbors(*loc).collect();
+            for neighbor in neighbor_locs {
+                self.cascade_reveal_recursive(&neighbor, visited);
             }
         }
 
@@ -188,30 +197,18 @@ impl Grid {
             CellType::Revealed => {}
         }
 
-        let neighboring_mines = self.count_neighboring_mines(&loc);
-        let neighboring_flags = self.count_neighboring_flags(&loc);
+        let neighboring_mines = self.count_neighboring_mines(loc);
+        let neighboring_flags = self.count_neighboring_flags(loc);
 
         if neighboring_flags != neighboring_mines {
             return CellChordResult::InvalidFlagCount;
         }
 
-        let start_r = loc.row.saturating_sub(1);
-        let end_r = min(self.rows() - 1, loc.row + 1);
-        let start_c = loc.col.saturating_sub(1);
-        let end_c = min(self.cols() - 1, loc.col + 1);
-
+        let neighbor_locs: Vec<_> = self.neighbors(loc).collect();
         let mut mines_hit = Vec::new();
-        for r in start_r..=end_r {
-            for c in start_c..=end_c {
-                if r == loc.row && c == loc.col {
-                    continue;
-                }
-                if matches!(
-                    self.reveal_cell(GridLoc { row: r, col: c }),
-                    CellRevealResult::Mine
-                ) {
-                    mines_hit.push(GridLoc { row: r, col: c });
-                }
+        for neighbor in neighbor_locs {
+            if matches!(self.reveal_cell(neighbor), CellRevealResult::Mine) {
+                mines_hit.push(neighbor);
             }
         }
 
@@ -222,46 +219,16 @@ impl Grid {
         }
     }
 
-    fn count_neighboring_flags(&self, loc: &GridLoc) -> u8 {
-        let start_r = loc.row.saturating_sub(1);
-        let end_r = min(self.rows() - 1, loc.row + 1);
-        let start_c = loc.col.saturating_sub(1);
-        let end_c = min(self.cols() - 1, loc.col + 1);
-
-        let mut count = 0;
-        for r in start_r..=end_r {
-            for c in start_c..=end_c {
-                if r == loc.row && c == loc.col {
-                    continue;
-                }
-                if let Some(cell) = self.get(r, c) {
-                    if matches!(cell.cell_type, CellType::Flagged) {
-                        count += 1;
-                    }
-                }
-            }
-        }
-        count
+    fn count_neighboring_flags(&self, loc: GridLoc) -> u8 {
+        self.neighbors(loc)
+            .filter(|n| matches!(self.cells[n.row][n.col].cell_type, CellType::Flagged))
+            .count() as u8
     }
 
-    pub fn count_neighboring_mines(&self, loc: &GridLoc) -> u8 {
-        let start_r = loc.row.saturating_sub(1);
-        let end_r = min(self.rows() - 1, loc.row + 1);
-        let start_c = loc.col.saturating_sub(1);
-        let end_c = min(self.cols() - 1, loc.col + 1);
-
-        let mut count = 0;
-        for r in start_r..=end_r {
-            for c in start_c..=end_c {
-                if r == loc.row && c == loc.col {
-                    continue;
-                }
-                if self.cells[r][c].is_mine {
-                    count += 1;
-                }
-            }
-        }
-        count
+    pub fn count_neighboring_mines(&self, loc: GridLoc) -> u8 {
+        self.neighbors(loc)
+            .filter(|n| self.cells[n.row][n.col].is_mine)
+            .count() as u8
     }
 
     pub fn reveal_all(&mut self) {
@@ -283,7 +250,7 @@ impl fmt::Display for Grid {
                 if col_index > 0 {
                     write!(f, " ")?;
                 }
-                let neighboring_mines = self.count_neighboring_mines(&GridLoc {
+                let neighboring_mines = self.count_neighboring_mines(GridLoc {
                     row: row_index,
                     col: col_index,
                 });
@@ -300,13 +267,13 @@ impl fmt::Display for Grid {
     }
 }
 
-#[derive(Clone, Default, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Hash)]
 pub struct GridLoc {
     pub row: usize,
     pub col: usize,
 }
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Copy, Default, Debug)]
 pub struct GridSize {
     pub rows: usize,
     pub cols: usize,

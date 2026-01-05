@@ -3,6 +3,8 @@ use iced::{
     widget::{container, mouse_area, text},
 };
 
+const DIGIT_LOOKUP: [&str; 9] = ["0", "1", "2", "3", "4", "5", "6", "7", "8"];
+
 #[derive(Debug, Clone, Default, Copy)]
 pub enum CellType {
     #[default]
@@ -27,21 +29,19 @@ impl Default for Cell {
 }
 
 impl Cell {
-    pub fn to_string(&self, neighboring_mines: u8) -> String {
+    pub fn to_string(&self, neighboring_mines: u8) -> &'static str {
         match self.cell_type {
-            CellType::Hidden => "⬛".to_string(),
+            CellType::Hidden => "⬛",
             CellType::Revealed => {
                 if self.is_mine {
-                    "💣".to_string()
+                    "💣"
+                } else if neighboring_mines == 0 {
+                    "  "
                 } else {
-                    if neighboring_mines == 0 {
-                        "  ".to_string()
-                    } else {
-                        neighboring_mines.to_string()
-                    }
+                    DIGIT_LOOKUP[neighboring_mines as usize]
                 }
             }
-            CellType::Flagged => "🚩".to_string(),
+            CellType::Flagged => "🚩",
         }
     }
     pub fn display<'a, Message: 'a + Clone>(
@@ -51,14 +51,14 @@ impl Cell {
         on_chord: Message,
         on_flag: Message,
     ) -> Element<'a, Message> {
-        let (cell_text, text_color) = match self.cell_type {
-            CellType::Hidden => ("".to_string(), Color::from_rgb(0.7, 0.7, 0.7)),
+        let (cell_text, text_color): (&'static str, Color) = match self.cell_type {
+            CellType::Hidden => ("", Color::from_rgb(0.7, 0.7, 0.7)),
             CellType::Revealed => {
                 if self.is_mine {
-                    ("💣".to_string(), Color::from_rgb(1.0, 0.0, 0.0))
+                    ("💣", Color::from_rgb(1.0, 0.0, 0.0))
                 } else {
                     (
-                        neighboring_mines.to_string(),
+                        DIGIT_LOOKUP[neighboring_mines as usize],
                         match neighboring_mines {
                             0 => Color::from_rgb(0.8, 0.8, 0.8),
                             1 => Color::from_rgb(0.0, 0.0, 1.0), // Blue
@@ -73,7 +73,7 @@ impl Cell {
                     )
                 }
             }
-            CellType::Flagged => ("🚩".to_string(), Color::from_rgb(1.0, 0.5, 0.0)),
+            CellType::Flagged => ("🚩", Color::from_rgb(1.0, 0.5, 0.0)),
         };
         let cell_type = self.cell_type;
 
