@@ -7,14 +7,14 @@ use crate::{
     state::{Difficulty, GameState},
     theme::*,
 };
-use iced::widget::{button, column, container, grid as iced_grid, mouse_area, row, stack, text};
+use iced::widget::{button, column, container, grid as iced_grid, row, stack, text};
 use iced::{Alignment, Background, Border, Color, Element, Length, Task};
 use iced_aw::number_input;
 
 use GameState::*;
 use Message::*;
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Clone, Copy, Debug, Default)]
 pub enum ClickMode {
     #[default]
     Reveal,
@@ -28,7 +28,7 @@ impl ClickMode {
             ClickMode::Flag => ClickMode::Reveal,
         };
     }
-    pub fn to_string(&self) -> &'static str {
+    pub fn to_string(self) -> &'static str {
         match self {
             ClickMode::Reveal => "Normal Mode",
             ClickMode::Flag => "Flag Mode",
@@ -130,17 +130,12 @@ impl App {
 
     pub fn view(&self) -> Element<'_, Message> {
         let grid_inner: Element<'_, Message> = match &self.state {
-            HomeScreen => {
-                let cells = (0..9)
-                    .flat_map(|_| (0..9).map(|_| (Cell::default()).display(0, NoOp, NoOp, NoOp)));
-                iced_grid(cells).columns(9).spacing(5).into()
-            }
             CreationScreen(GridConfig { mines, size }) => {
                 let cells = (0..size.rows).flat_map(|_| {
                     (0..size.cols).map(|_| (Cell::default()).display(0, NoOp, NoOp, NoOp))
                 });
                 let grid_view = iced_grid(cells).columns(size.cols);
-                let difficulties = row(Difficulty::DIFF_ALLL.iter().map(Difficulty::display));
+                let difficulties = row(Difficulty::DIFF_ALL.iter().map(Difficulty::display));
 
                 let overlay = container(
                     column![
@@ -267,7 +262,7 @@ impl App {
                 background: Some(GRID_CONTAINER_BACKGROUND_COLOR),
                 ..Default::default()
             });
-        container(column![header(&self), grid])
+        container(column![header(self), grid])
             .style(|_theme| container::Style {
                 background: Some(BACKGROUND_COLOR),
                 text_color: Some(TEXT_COLOR),

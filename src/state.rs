@@ -1,21 +1,22 @@
-use iced::{
-    Element,
-    widget::{Button, button, text},
-};
+use iced::{Element, widget::button};
 
 use crate::{
-    grid::{Grid, GridConfig, GridSize, MinesAmt},
+    grid::{Grid, GridConfig, GridSize},
     message::Message,
 };
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub enum GameState {
-    #[default]
-    HomeScreen,
     CreationScreen(GridConfig),
     Initialized(GridConfig),
     Started(Grid),
     Over(Grid),
+}
+
+impl Default for GameState {
+    fn default() -> Self {
+        Self::Initialized(Difficulty::default().state.clone())
+    }
 }
 
 #[derive(Debug)]
@@ -53,7 +54,7 @@ impl Difficulty {
             mines: 160,
         },
     };
-    pub const DIFF_ALLL: &[Self] = &[
+    pub const DIFF_ALL: &[Self] = &[
         Self::DIFF_EASY,
         Self::DIFF_MEDIUM,
         Self::DIFF_HARD,

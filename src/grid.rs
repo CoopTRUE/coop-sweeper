@@ -3,7 +3,7 @@ use rand::Rng;
 use crate::cell::{Cell, CellType};
 use std::{cmp::min, collections::HashSet, fmt};
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct GridConfig {
     pub size: GridSize,
     pub mines: MinesAmt,
@@ -273,13 +273,13 @@ impl fmt::Display for Grid {
     }
 }
 
-#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 pub struct GridLoc {
     pub row: usize,
     pub col: usize,
 }
 
-#[derive(Clone, Copy, Default, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GridSize {
     pub rows: usize,
     pub cols: usize,

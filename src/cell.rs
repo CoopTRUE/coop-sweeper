@@ -1,14 +1,10 @@
 use crate::assets::*;
 use crate::message::Message;
-use crate::theme::*;
-use iced::{
-    Border, Color, Element, Length,
-    widget::{Image, container, mouse_area, text},
-};
+use iced::{Element, widget::mouse_area};
 
 const DIGIT_LOOKUP: [&str; 9] = ["0", "1", "2", "3", "4", "5", "6", "7", "8"];
 
-#[derive(Debug, Clone, Default, Copy)]
+#[derive(Clone, Copy, Debug, Default)]
 pub enum CellType {
     #[default]
     Hidden,
@@ -16,23 +12,14 @@ pub enum CellType {
     Flagged,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Cell {
     pub cell_type: CellType,
     pub is_mine: bool,
 }
 
-impl Default for Cell {
-    fn default() -> Self {
-        Self {
-            cell_type: CellType::default(),
-            is_mine: false,
-        }
-    }
-}
-
 impl Cell {
-    pub fn to_string(&self, neighboring_mines: u8) -> &'static str {
+    pub fn to_string(self, neighboring_mines: u8) -> &'static str {
         match self.cell_type {
             CellType::Hidden => "⬛",
             CellType::Revealed => {

@@ -73,7 +73,7 @@ pub fn get_flag_image() -> Image {
     create_image(FLAG_HANDLE.clone())
 }
 
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Clone, Copy, Debug, Default)]
 pub enum Face {
     #[default]
     Happy = 0,
