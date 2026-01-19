@@ -1,7 +1,7 @@
 use rand::Rng;
 
 use crate::cell::{Cell, CellType};
-use std::{cmp::min, collections::HashSet, fmt};
+use std::{cmp::min, collections::HashSet, fmt, time::Instant};
 
 #[derive(Clone, Debug)]
 pub struct GridConfig {
@@ -33,6 +33,7 @@ pub enum CellChordResult {
     Flagged,
     OutOfBounds,
 }
+
 #[derive(Debug)]
 pub struct Grid {
     cells: Vec<Vec<Cell>>,
@@ -243,6 +244,28 @@ impl Grid {
                 self.reveal_cell(GridLoc { row, col });
             }
         }
+    }
+
+    pub fn highlight_cells(&mut self, locs: Vec<GridLoc>, now: Instant) {
+        for loc in locs {
+            self.get_mut(loc.row, loc.col)
+                .unwrap()
+                .highlight
+                .go_mut(true, now);
+        }
+    }
+
+    pub fn clear_highlights(&mut self, now: Instant) {
+        for row in 0..self.rows() {
+            for col in 0..self.cols() {
+                self.get_mut(row, col).unwrap().highlight.go_mut(false, now);
+            }
+        }
+    }
+    pub fn is_animating(&self, now: Instant) -> bool {
+        self.cells
+            .iter()
+            .any(|row| row.iter().any(|cell| cell.highlight.is_animating(now)))
     }
 }
 

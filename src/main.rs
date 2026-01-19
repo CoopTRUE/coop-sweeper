@@ -10,7 +10,7 @@ mod theme;
 use crate::game::App;
 
 pub fn main() -> iced::Result {
-    iced::application(App::default, App::update, App::view)
+    iced::application::timed(App::default, App::update, App::subscription, App::view)
         // .theme(theme::theme)
         .window_size((500, 700))
         .run()
