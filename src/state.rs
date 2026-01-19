@@ -1,29 +1,74 @@
-use crate::grid::{Grid, GridSize, MinesAmt};
+use iced::{
+    Element,
+    widget::{Button, button, text},
+};
+
+use crate::{
+    grid::{Grid, GridConfig, GridSize, MinesAmt},
+    message::Message,
+};
 
 #[derive(Debug, Default)]
 pub enum GameState {
     #[default]
     HomeScreen,
-    CreationScreen(GridSize, MinesAmt),
-    Initialized(GridSize, MinesAmt),
+    CreationScreen(GridConfig),
+    Initialized(GridConfig),
     Started(Grid),
     Over(Grid),
 }
 
-impl GameState {
-    pub const ALL_DIFFS: &'static [GameState; 4] = &[
-        GameState::DIFF_EASY,
-        GameState::DIFF_MEDIUM,
-        GameState::DIFF_HARD,
-        GameState::DIFF_EXTREME,
+#[derive(Debug)]
+pub struct Difficulty {
+    pub name: &'static str,
+    pub state: &'static GridConfig,
+}
+
+impl Difficulty {
+    pub const DIFF_EASY: Self = Self {
+        name: "Easy",
+        state: &GridConfig {
+            size: GridSize { rows: 9, cols: 9 },
+            mines: 10,
+        },
+    };
+    pub const DIFF_MEDIUM: Self = Self {
+        name: "Medium",
+        state: &GridConfig {
+            size: GridSize { rows: 16, cols: 16 },
+            mines: 40,
+        },
+    };
+    pub const DIFF_HARD: Self = Self {
+        name: "Hard",
+        state: &GridConfig {
+            size: GridSize { rows: 16, cols: 30 },
+            mines: 99,
+        },
+    };
+    pub const DIFF_EXTREME: Self = Self {
+        name: "Extreme",
+        state: &GridConfig {
+            size: GridSize { rows: 30, cols: 24 },
+            mines: 160,
+        },
+    };
+    pub const DIFF_ALLL: &[Self] = &[
+        Self::DIFF_EASY,
+        Self::DIFF_MEDIUM,
+        Self::DIFF_HARD,
+        Self::DIFF_EXTREME,
     ];
 
-    pub const DEFAULT_DIFF: GameState = GameState::Initialized(GridSize { rows: 9, cols: 9 }, 10);
+    pub fn display(&self) -> Element<'static, Message> {
+        button(self.name)
+            .on_press(Message::InputGridConfig(self.state.clone()))
+            .into()
+    }
+}
 
-    pub const DIFF_EASY: GameState = GameState::CreationScreen(GridSize { rows: 9, cols: 9 }, 10);
-    pub const DIFF_MEDIUM: GameState =
-        GameState::CreationScreen(GridSize { rows: 16, cols: 16 }, 40);
-    pub const DIFF_HARD: GameState = GameState::CreationScreen(GridSize { rows: 16, cols: 30 }, 99);
-    pub const DIFF_EXTREME: GameState =
-        GameState::CreationScreen(GridSize { rows: 30, cols: 24 }, 160);
+impl Default for Difficulty {
+    fn default() -> Self {
+        Self::DIFF_EASY
+    }
 }

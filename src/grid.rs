@@ -3,6 +3,12 @@ use rand::Rng;
 use crate::cell::{Cell, CellType};
 use std::{cmp::min, collections::HashSet, fmt};
 
+#[derive(Debug, Clone)]
+pub struct GridConfig {
+    pub size: GridSize,
+    pub mines: MinesAmt,
+}
+
 pub enum CellRevealResult {
     Success,
     Mine,

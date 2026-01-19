@@ -1,4 +1,4 @@
-use crate::grid::GridLoc;
+use crate::grid::{GridConfig, GridLoc};
 
 #[derive(Clone, Debug)]
 pub enum Message {
@@ -10,6 +10,7 @@ pub enum Message {
     InputRows(usize),
     InputCols(usize),
     InputMines(usize),
+    InputGridConfig(GridConfig),
 
     GameNew,
     GameStart,
