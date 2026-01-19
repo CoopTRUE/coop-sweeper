@@ -2,9 +2,9 @@ use crate::{
     assets::Face,
     cell::Cell,
     elements::header,
-    grid::{CellChordResult, CellRevealResult, Grid, GridLoc},
+    grid::{CellChordResult, CellRevealResult, Grid, GridConfig, GridLoc},
     message::Message,
-    state::GameState,
+    state::{Difficulty, GameState},
     theme::*,
 };
 use iced::widget::{button, column, container, grid as iced_grid, mouse_area, row, stack, text};
@@ -36,20 +36,11 @@ impl ClickMode {
     }
 }
 
+#[derive(Default)]
 pub struct App {
     pub state: GameState,
     pub click_mode: ClickMode,
     pub face: Face,
-}
-
-impl Default for App {
-    fn default() -> Self {
-        Self {
-            state: GameState::DEFAULT_DIFF,
-            click_mode: ClickMode::default(),
-            face: Face::default(),
-        }
-    }
 }
 
 impl App {
@@ -66,29 +57,35 @@ impl App {
                 println!("FaceRelease");
                 state
             }
-            (GameNew, _) => GameState::DIFF_EASY,
+            (GameNew, _) => CreationScreen(Difficulty::default().state.clone()),
             (ClickModeToggle, state) => {
                 self.click_mode.toggle();
                 state
             }
-            (InputRows(rows), CreationScreen(mut size, mines)) => {
+            (InputRows(rows), CreationScreen(GridConfig { mines, mut size })) => {
                 size.rows = rows;
-                CreationScreen(size, mines)
+                CreationScreen(GridConfig { mines, size })
             }
-            (InputCols(cols), CreationScreen(mut size, mines)) => {
+            (InputCols(cols), CreationScreen(GridConfig { mines, mut size })) => {
                 size.cols = cols;
-                CreationScreen(size, mines)
+                CreationScreen(GridConfig { mines, size })
             }
-            (InputMines(mines), CreationScreen(size, _)) => CreationScreen(size, mines),
-            (GameStart, CreationScreen(size, mines)) => Initialized(size, mines),
-            (RevealClick(loc), Initialized(size, mines)) => {
+            (InputMines(mines), CreationScreen(GridConfig { size, .. })) => {
+                CreationScreen(GridConfig { mines, size })
+            }
+            (InputGridConfig(grid_config), CreationScreen(..)) => CreationScreen(grid_config),
+            (GameStart, CreationScreen(GridConfig { mines, size })) => {
+                Initialized(GridConfig { mines, size })
+            }
+            (RevealClick(loc), Initialized(GridConfig { mines, size })) => {
                 self.face = Face::Surprised;
                 let mut grid = Grid::new(size);
                 // use rand::SeedableRng;
-                // use rand_chacha::ChaCha20Rng;
+                // use rand_chacha::ChaCha20Rng;s
                 // let mut rng = ChaCha20Rng::seed_from_u64(6767);
                 // grid.populate_mines_with_rng(loc, mines, &mut rng);
                 grid.populate_mines(loc, mines);
+                print!("Initialized");
                 Started(grid)
             }
             (RevealClick(loc), Started(mut grid)) => {
@@ -138,15 +135,17 @@ impl App {
                     .flat_map(|_| (0..9).map(|_| (Cell::default()).display(0, NoOp, NoOp, NoOp)));
                 iced_grid(cells).columns(9).spacing(5).into()
             }
-            CreationScreen(size, mines) => {
+            CreationScreen(GridConfig { mines, size }) => {
                 let cells = (0..size.rows).flat_map(|_| {
                     (0..size.cols).map(|_| (Cell::default()).display(0, NoOp, NoOp, NoOp))
                 });
                 let grid_view = iced_grid(cells).columns(size.cols);
+                let difficulties = row(Difficulty::DIFF_ALLL.iter().map(Difficulty::display));
 
                 let overlay = container(
                     column![
                         text("🎮 Minesweeper").size(32),
+                        difficulties,
                         row![
                             text("Rows:").width(60),
                             number_input(&size.rows, 5..50, InputRows).width(100),
@@ -195,7 +194,7 @@ impl App {
 
                 stack![grid_view, overlay].into()
             }
-            Initialized(size, _) => {
+            Initialized(GridConfig { size, .. }) => {
                 let buttons = (0..size.rows).flat_map(|row| {
                     (0..size.cols).map(move |col| {
                         (Cell::default()).display(
