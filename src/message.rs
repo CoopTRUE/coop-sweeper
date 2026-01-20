@@ -21,7 +21,7 @@ pub enum Message {
     ChordClick(GridLoc),
     FlagClick(GridLoc),
 
-    HighlightCells(Vec<GridLoc>),
+    RequestHint,
 
     Quit,
 }

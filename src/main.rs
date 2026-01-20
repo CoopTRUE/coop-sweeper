@@ -1,3 +1,4 @@
+mod algorithms;
 mod assets;
 mod cell;
 mod elements;

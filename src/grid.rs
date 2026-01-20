@@ -89,7 +89,7 @@ impl Grid {
     }
 
     /// Returns an iterator over all neighboring cell locations (excluding the center).
-    fn neighbors(&self, loc: GridLoc) -> impl Iterator<Item = GridLoc> {
+    pub fn neighbors(&self, loc: GridLoc) -> impl Iterator<Item = GridLoc> {
         let start_r = loc.row.saturating_sub(1);
         let end_r = min(self.rows() - 1, loc.row + 1);
         let start_c = loc.col.saturating_sub(1);
@@ -226,7 +226,7 @@ impl Grid {
         }
     }
 
-    fn count_neighboring_flags(&self, loc: GridLoc) -> u8 {
+    pub fn count_neighboring_flags(&self, loc: GridLoc) -> u8 {
         self.neighbors(loc)
             .filter(|n| matches!(self.cells[n.row][n.col].cell_type, CellType::Flagged))
             .count() as u8

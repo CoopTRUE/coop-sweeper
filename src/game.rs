@@ -1,5 +1,6 @@
 use std::time::Instant;
 
+use crate::algorithms;
 use crate::{
     assets::Face,
     cell::Cell,
@@ -137,8 +138,9 @@ impl App {
                 std::process::exit(0);
             }
             (NoOp, state) => state,
-            (HighlightCells(cells), Started(mut grid)) => {
-                grid.highlight_cells(cells, self.now);
+            (RequestHint, Started(mut grid)) => {
+                let hints = algorithms::generate_brute_force_hints(&mut grid);
+                grid.highlight_cells(hints, self.now);
                 Started(grid)
             }
             (message, state) => {
