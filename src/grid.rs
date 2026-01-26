@@ -41,7 +41,12 @@ pub struct Grid {
 }
 
 impl Grid {
-    // Initializer
+    // ==================== Constructor ====================
+
+    /// Creates a new grid with the specified dimensions.
+    ///
+    /// All cells are initialized to their default state (hidden, no mine).
+    /// Call `populate_mines` to place mines after the first click.
     pub fn new(size: GridSize) -> Self {
         Self {
             cells: vec![vec![Cell::default(); size.cols]; size.rows],
@@ -49,10 +54,20 @@ impl Grid {
         }
     }
 
+    // ==================== Initialization ====================
+
+    /// Populates the grid with mines, avoiding the specified location.
+    ///
+    /// This ensures the first click is never a mine. After placing mines,
+    /// automatically performs a cascade reveal from the clicked location.
     pub fn populate_mines(&mut self, loc: GridLoc, mines: MinesAmt) {
         self.populate_mines_with_rng(loc, mines, &mut rand::rng());
     }
 
+    /// Populates the grid with mines using a custom RNG for deterministic testing.
+    ///
+    /// # Panics
+    /// Panics if the grid has already been populated.
     pub fn populate_mines_with_rng<R: Rng>(&mut self, loc: GridLoc, mines: MinesAmt, rng: &mut R) {
         if self.populated {
             unreachable!("Grid already populated");
@@ -71,24 +86,34 @@ impl Grid {
         self.cascade_reveal(loc);
     }
 
-    // Getters
+    // ==================== Dimension Accessors ====================
+
+    /// Returns the number of rows in the grid.
     pub fn rows(&self) -> usize {
         self.cells.len()
     }
 
+    /// Returns the number of columns in the grid.
     pub fn cols(&self) -> usize {
         self.cells[0].len()
     }
 
+    // ==================== Cell Accessors ====================
+
+    /// Returns a reference to the cell at the specified location, if valid.
     pub fn get(&self, row: usize, col: usize) -> Option<&Cell> {
         self.cells.get(row)?.get(col)
     }
 
+    /// Returns a mutable reference to the cell at the specified location, if valid.
     pub fn get_mut(&mut self, row: usize, col: usize) -> Option<&mut Cell> {
         self.cells.get_mut(row)?.get_mut(col)
     }
 
     /// Returns an iterator over all neighboring cell locations (excluding the center).
+    ///
+    /// Neighbors include all 8 adjacent cells (orthogonal and diagonal),
+    /// automatically clamped to grid boundaries.
     pub fn neighbors(&self, loc: GridLoc) -> impl Iterator<Item = GridLoc> {
         let start_r = loc.row.saturating_sub(1);
         let end_r = min(self.rows() - 1, loc.row + 1);
@@ -106,7 +131,54 @@ impl Grid {
         })
     }
 
-    // Mutators
+    // ==================== Counting & Queries ====================
+
+    /// Returns the total number of mines in the grid.
+    pub fn count_mines(&self) -> usize {
+        self.cells
+            .iter()
+            .flatten()
+            .filter(|cell| cell.is_mine)
+            .count()
+    }
+
+    /// Returns the total number of flagged cells in the grid.
+    pub fn count_flags(&self) -> usize {
+        self.cells
+            .iter()
+            .flatten()
+            .filter(|cell| matches!(cell.cell_type, CellType::Flagged))
+            .count()
+    }
+
+    /// Returns the count of flagged cells adjacent to the specified location.
+    pub fn count_neighboring_flags(&self, loc: GridLoc) -> u8 {
+        self.neighbors(loc)
+            .filter(|n| matches!(self.cells[n.row][n.col].cell_type, CellType::Flagged))
+            .count() as u8
+    }
+
+    /// Returns the count of mines adjacent to the specified location.
+    ///
+    /// This is the number displayed on revealed cells.
+    pub fn count_neighboring_mines(&self, loc: GridLoc) -> u8 {
+        self.neighbors(loc)
+            .filter(|n| self.cells[n.row][n.col].is_mine)
+            .count() as u8
+    }
+
+    /// Returns `true` if any cell highlight animation is currently in progress.
+    pub fn is_animating(&self, now: Instant) -> bool {
+        self.cells
+            .iter()
+            .any(|row| row.iter().any(|cell| cell.highlight.is_animating(now)))
+    }
+
+    // ==================== Reveal Operations ====================
+
+    /// Reveals a single cell without cascading.
+    ///
+    /// Returns the result indicating success, mine hit, or why the reveal failed.
     fn reveal_cell(&mut self, loc: GridLoc) -> CellRevealResult {
         let Some(cell) = self.get_mut(loc.row, loc.col) else {
             return CellRevealResult::OutOfBounds;
@@ -125,29 +197,20 @@ impl Grid {
         }
     }
 
-    pub fn flag_cell(&mut self, loc: GridLoc) -> CellFlagResult {
-        let Some(cell) = self.get_mut(loc.row, loc.col) else {
-            return CellFlagResult::OutOfBounds;
-        };
-        match cell.cell_type {
-            CellType::Hidden => {
-                cell.cell_type = CellType::Flagged;
-                CellFlagResult::Success
-            }
-            CellType::Revealed => CellFlagResult::AlreadyRevealed,
-            CellType::Flagged => {
-                cell.cell_type = CellType::Hidden;
-                CellFlagResult::Success
-            }
-        }
-    }
-
     /// Reveals a cell and recursively reveals all adjacent cells if there are no neighboring mines.
-    /// Returns `Mine(loc)` if a mine was revealed, otherwise `Success`.
+    ///
+    /// This implements the classic minesweeper "flood fill" behavior where clicking
+    /// on an empty cell (0 neighboring mines) automatically reveals all connected
+    /// empty cells and their borders.
+    ///
+    /// Returns `Mine` if a mine was revealed, otherwise `Success`.
     pub fn cascade_reveal(&mut self, loc: GridLoc) -> CellRevealResult {
         self.cascade_reveal_recursive(&loc, &mut HashSet::new())
     }
 
+    /// Internal recursive helper for cascade reveal.
+    ///
+    /// Uses a visited set to prevent infinite loops and redundant processing.
     fn cascade_reveal_recursive(
         &mut self,
         loc: &GridLoc,
@@ -189,6 +252,13 @@ impl Grid {
         CellRevealResult::Success
     }
 
+    /// Performs a chord reveal (middle-click behavior) on a revealed cell.
+    ///
+    /// If the number of adjacent flags matches the cell's mine count,
+    /// reveals all non-flagged neighbors. This is a common speedrun technique.
+    ///
+    /// Returns `Mines(locs)` if any mines were hit (game over), indicating
+    /// which mines were incorrectly unflagged.
     pub fn chord_reveal(&mut self, loc: GridLoc) -> CellChordResult {
         if loc.row >= self.rows() || loc.col >= self.cols() {
             return CellChordResult::OutOfBounds;
@@ -226,18 +296,9 @@ impl Grid {
         }
     }
 
-    pub fn count_neighboring_flags(&self, loc: GridLoc) -> u8 {
-        self.neighbors(loc)
-            .filter(|n| matches!(self.cells[n.row][n.col].cell_type, CellType::Flagged))
-            .count() as u8
-    }
-
-    pub fn count_neighboring_mines(&self, loc: GridLoc) -> u8 {
-        self.neighbors(loc)
-            .filter(|n| self.cells[n.row][n.col].is_mine)
-            .count() as u8
-    }
-
+    /// Reveals all cells in the grid.
+    ///
+    /// Used at game end to show the complete board state.
     pub fn reveal_all(&mut self) {
         for row in 0..self.rows() {
             for col in 0..self.cols() {
@@ -246,6 +307,35 @@ impl Grid {
         }
     }
 
+    // ==================== Flag Operations ====================
+
+    /// Toggles the flag state of a cell.
+    ///
+    /// - Hidden cells become flagged
+    /// - Flagged cells become hidden (unflagged)
+    /// - Revealed cells cannot be flagged
+    pub fn flag_cell(&mut self, loc: GridLoc) -> CellFlagResult {
+        let Some(cell) = self.get_mut(loc.row, loc.col) else {
+            return CellFlagResult::OutOfBounds;
+        };
+        match cell.cell_type {
+            CellType::Hidden => {
+                cell.cell_type = CellType::Flagged;
+                CellFlagResult::Success
+            }
+            CellType::Revealed => CellFlagResult::AlreadyRevealed,
+            CellType::Flagged => {
+                cell.cell_type = CellType::Hidden;
+                CellFlagResult::Success
+            }
+        }
+    }
+
+    // ==================== Highlight Operations ====================
+
+    /// Activates the highlight animation on the specified cells.
+    ///
+    /// Used for visual feedback, such as indicating incorrectly flagged mines.
     pub fn highlight_cells(&mut self, locs: Vec<GridLoc>, now: Instant) {
         for loc in locs {
             self.get_mut(loc.row, loc.col)
@@ -255,17 +345,13 @@ impl Grid {
         }
     }
 
+    /// Deactivates highlight animations on all cells.
     pub fn clear_highlights(&mut self, now: Instant) {
         for row in 0..self.rows() {
             for col in 0..self.cols() {
                 self.get_mut(row, col).unwrap().highlight.go_mut(false, now);
             }
         }
-    }
-    pub fn is_animating(&self, now: Instant) -> bool {
-        self.cells
-            .iter()
-            .any(|row| row.iter().any(|cell| cell.highlight.is_animating(now)))
     }
 }
 
