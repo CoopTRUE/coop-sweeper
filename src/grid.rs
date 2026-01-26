@@ -167,6 +167,20 @@ impl Grid {
             .count() as u8
     }
 
+    /// Returns `true` if all mines are flagged.
+    pub fn all_mines_flagged(&self) -> bool {
+        self.cells
+            .iter()
+            .flatten()
+            .filter(|cell| cell.is_mine)
+            .all(|cell| matches!(cell.cell_type, CellType::Flagged))
+    }
+
+    /// Returns `true` if the game is won.
+    pub fn is_won(&self) -> bool {
+        self.count_mines() == self.count_flags() && self.all_mines_flagged()
+    }
+
     /// Returns `true` if any cell highlight animation is currently in progress.
     pub fn is_animating(&self, now: Instant) -> bool {
         self.cells

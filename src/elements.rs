@@ -7,7 +7,7 @@ use crate::{assets::*, game::App, grid::GridConfig, message::Message, state::Gam
 
 pub fn header(app: &App) -> Element<'static, Message> {
     let score_display = match &app.state {
-        GameState::Started(grid) | GameState::Over(grid) => {
+        GameState::Started(grid) | GameState::Won(grid) | GameState::Lost(grid) => {
             let mines = grid.count_mines() as isize;
             let flags = grid.count_flags() as isize;
             score_display(mines - flags)

@@ -117,23 +117,19 @@ impl App {
             (RevealClick(loc), Started(mut grid)) => {
                 self.face = Face::Surprised;
                 grid.clear_highlights(self.now);
-                match grid.cascade_reveal(loc) {
-                    CellRevealResult::Mine => Over(grid),
-                    _ => Started(grid),
-                }
+                let hit_mine = matches!(grid.cascade_reveal(loc), CellRevealResult::Mine);
+                Self::resolve_game_state(grid, hit_mine)
             }
             (ChordClick(loc), Started(mut grid)) => {
                 self.face = Face::Surprised;
                 grid.clear_highlights(self.now);
-                match grid.chord_reveal(loc) {
-                    CellChordResult::Mines(_mines) => Over(grid),
-                    _ => Started(grid),
-                }
+                let hit_mine = matches!(grid.chord_reveal(loc), CellChordResult::Mines(..));
+                Self::resolve_game_state(grid, hit_mine)
             }
             (FlagClick(loc), Started(mut grid)) => {
                 grid.clear_highlights(self.now);
                 grid.flag_cell(loc);
-                Started(grid)
+                Self::resolve_game_state(grid, false)
             }
             (Quit, ..) => {
                 std::process::exit(0);
@@ -148,8 +144,22 @@ impl App {
                 unreachable!("Unhandled message: {:?}, {:?}", message, state);
             }
         };
+
         Task::none()
     }
+
+    fn resolve_game_state(mut grid: Grid, hit_mine: bool) -> GameState {
+        if hit_mine {
+            grid.reveal_all();
+            Lost(grid)
+        } else if grid.is_won() {
+            grid.reveal_all();
+            Won(grid)
+        } else {
+            Started(grid)
+        }
+    }
+
     fn create_message_handler(&self, message: Message) -> Message {
         match self.click_mode {
             ClickMode::Reveal => message,
@@ -162,6 +172,41 @@ impl App {
         }
     }
 
+    /// Renders a grid with all interactions disabled (for game over states).
+    fn render_disabled_grid(&self, grid: &Grid) -> iced_grid::Grid<'_, Message> {
+        let buttons = (0..grid.rows()).flat_map(|row| {
+            (0..grid.cols()).map(move |col| {
+                grid.get(row, col).unwrap().display(
+                    grid.count_neighboring_mines(GridLoc { row, col }),
+                    NoOp,
+                    NoOp,
+                    NoOp,
+                    self.now,
+                )
+            })
+        });
+        iced_grid(buttons).columns(grid.cols())
+    }
+
+    /// Creates a centered overlay container with semi-transparent background.
+    fn overlay<'a>(
+        content: impl Into<Element<'a, Message>>,
+        alpha: f32,
+    ) -> container::Container<'a, Message> {
+        container(content)
+            .center_x(Length::Fill)
+            .center_y(Length::Fill)
+            .style(move |_theme| container::Style {
+                background: Some(Background::Color(Color {
+                    a: alpha,
+                    ..Default::default()
+                })),
+                text_color: Some(Color::WHITE),
+                border: Border::default(),
+                ..Default::default()
+            })
+    }
+
     pub fn view(&self) -> Element<'_, Message> {
         let grid_inner: Element<'_, Message> = match &self.state {
             CreationScreen(GridConfig { mines, size }) => {
@@ -171,7 +216,7 @@ impl App {
                 let grid_view = iced_grid(cells).columns(size.cols);
                 let difficulties = row(Difficulty::DIFF_ALL.iter().map(Difficulty::display));
 
-                let overlay = container(
+                let overlay = Self::overlay(
                     column![
                         text("🎮 Minesweeper").size(32),
                         difficulties,
@@ -208,18 +253,8 @@ impl App {
                     .spacing(15)
                     .padding(30)
                     .align_x(Alignment::Center),
-                )
-                .center_x(Length::Fill)
-                .center_y(Length::Fill)
-                .style(|_theme| container::Style {
-                    background: Some(Background::Color(Color {
-                        a: 0.8,
-                        ..Default::default()
-                    })),
-                    text_color: Some(Color::WHITE),
-                    border: Border::default(),
-                    ..Default::default()
-                });
+                    0.8,
+                );
 
                 stack![grid_view, overlay].into()
             }
@@ -251,21 +286,29 @@ impl App {
                 });
                 iced_grid(buttons).columns(grid.cols()).into()
             }
-            Over(grid) => {
-                let buttons = (0..grid.rows()).flat_map(|row| {
-                    (0..grid.cols()).map(move |col| {
-                        grid.get(row, col).unwrap().display(
-                            grid.count_neighboring_mines(GridLoc { row, col }),
-                            NoOp,
-                            NoOp,
-                            NoOp,
-                            self.now,
-                        )
-                    })
-                });
-                let grid_view = iced_grid(buttons).columns(grid.cols());
+            Won(grid) => {
+                let grid_view = self.render_disabled_grid(grid);
 
-                let overlay = container(
+                let overlay = Self::overlay(
+                    column![
+                        text("🎉 Game Won! 🎉").size(48),
+                        text("You found all the mines!").size(24),
+                        button("Quit")
+                            .on_press(Quit)
+                            .padding(10)
+                            .style(button::success),
+                    ]
+                    .spacing(10)
+                    .align_x(Alignment::Center),
+                    0.7,
+                );
+
+                stack![grid_view, overlay].into()
+            }
+            Lost(grid) => {
+                let grid_view = self.render_disabled_grid(grid);
+
+                let overlay = Self::overlay(
                     column![
                         text("💥 Game Over! 💥").size(48),
                         text("You hit a mine!").size(24),
@@ -276,18 +319,8 @@ impl App {
                     ]
                     .spacing(10)
                     .align_x(Alignment::Center),
-                )
-                .center_x(Length::Fill)
-                .center_y(Length::Fill)
-                .style(|_theme| container::Style {
-                    background: Some(Background::Color(Color {
-                        a: 0.7,
-                        ..Default::default()
-                    })),
-                    text_color: Some(Color::WHITE),
-                    border: Border::default(),
-                    ..Default::default()
-                });
+                    0.7,
+                );
 
                 stack![grid_view, overlay].into()
             }
