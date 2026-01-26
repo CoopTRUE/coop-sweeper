@@ -61,7 +61,7 @@ impl Cell {
                 if self.is_mine {
                     get_mine_image()
                 } else {
-                    get_cell_image(neighboring_mines)
+                    get_cell_image(neighboring_mines as usize)
                 }
             }
             CellType::Flagged => get_flag_image(),

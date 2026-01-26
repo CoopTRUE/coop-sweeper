@@ -38,10 +38,12 @@ fn create_handle(bytes: &'static [u8]) -> image::Handle {
     image::Handle::from_bytes(bytes)
 }
 
-fn create_image(handle: image::Handle) -> Image {
+fn create_image(handle: &image::Handle) -> Image {
     image(handle).filter_method(image::FilterMethod::Nearest)
 }
 
+static MINUS_HANDLE: LazyLock<image::Handle> =
+    LazyLock::new(|| create_handle(include_bytes!("../assets/cminus.png")));
 static CLOCK_HANDLES: LazyLock<[image::Handle; 10]> =
     LazyLock::new(|| CLOCK_BYTES.map(create_handle));
 static CELL_HANDLES: LazyLock<[image::Handle; 9]> = LazyLock::new(|| CELL_BYTES.map(create_handle));
@@ -53,24 +55,28 @@ static FLAG_HANDLE: LazyLock<image::Handle> =
     LazyLock::new(|| create_handle(include_bytes!("../assets/flag.png")));
 static FACE_HANDLES: LazyLock<[image::Handle; 2]> = LazyLock::new(|| FACE_BYTES.map(create_handle));
 
-pub fn get_clock_image(number: u8) -> Image {
-    create_image(CLOCK_HANDLES[number as usize].clone())
+pub fn get_clock_image(number: usize) -> Image {
+    create_image(&CLOCK_HANDLES[number])
 }
 
-pub fn get_cell_image(number: u8) -> Image {
-    create_image(CELL_HANDLES[number as usize].clone())
+pub fn get_cell_image(number: usize) -> Image {
+    create_image(&CELL_HANDLES[number])
 }
 
 pub fn get_unrevealed_cell_image() -> Image {
-    create_image(UNREVEALED_CELL_HANDLE.clone())
+    create_image(&UNREVEALED_CELL_HANDLE)
 }
 
 pub fn get_mine_image() -> Image {
-    create_image(MINE_HANDLE.clone())
+    create_image(&MINE_HANDLE)
 }
 
 pub fn get_flag_image() -> Image {
-    create_image(FLAG_HANDLE.clone())
+    create_image(&FLAG_HANDLE)
+}
+
+pub fn get_minus_image() -> Image {
+    create_image(&MINUS_HANDLE)
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -81,5 +87,5 @@ pub enum Face {
 }
 
 pub fn get_face_image(face: Face) -> Image {
-    create_image(FACE_HANDLES[face as usize].clone())
+    create_image(&FACE_HANDLES[face as usize])
 }
