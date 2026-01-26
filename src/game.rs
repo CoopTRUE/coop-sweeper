@@ -131,6 +131,7 @@ impl App {
                 }
             }
             (FlagClick(loc), Started(mut grid)) => {
+                grid.clear_highlights(self.now);
                 grid.flag_cell(loc);
                 Started(grid)
             }
