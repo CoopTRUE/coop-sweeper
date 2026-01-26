@@ -10,7 +10,8 @@ pub enum GameState {
     CreationScreen(GridConfig),
     Initialized(GridConfig),
     Started(Grid),
-    Over(Grid),
+    Won(Grid),
+    Lost(Grid),
 }
 
 impl Default for GameState {
