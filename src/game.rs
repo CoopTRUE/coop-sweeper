@@ -10,6 +10,7 @@ use crate::{
     state::{Difficulty, GameState},
     theme::*,
 };
+use iced::time::{self, seconds};
 use iced::{Alignment, Background, Border, Color, Element, Length, Task, window};
 use iced::{
     Subscription,
@@ -25,6 +26,15 @@ pub enum ClickMode {
     #[default]
     Reveal,
     Flag,
+}
+
+impl ClickMode {
+    pub fn opacity(self) -> f32 {
+        match self {
+            ClickMode::Reveal => 1.0,
+            ClickMode::Flag => 0.6,
+        }
+    }
 }
 
 impl ClickMode {
@@ -47,6 +57,7 @@ pub struct App {
     pub click_mode: ClickMode,
     pub face: Face,
     pub now: Instant,
+    pub started: Option<Instant>,
 }
 
 impl Default for App {
@@ -56,6 +67,7 @@ impl Default for App {
             click_mode: ClickMode::default(),
             face: Face::default(),
             now: Instant::now(),
+            started: None,
         }
     }
 }
@@ -66,7 +78,10 @@ impl App {
         if is_animating {
             window::frames().map(|_| Message::NoOp)
         } else {
-            Subscription::none()
+            match self.state {
+                Started(..) => time::every(seconds(1)).map(|_| Message::NoOp),
+                _ => Subscription::none(),
+            }
         }
     }
     pub fn update(&mut self, message: Message, now: Instant) -> Task<Message> {
@@ -112,6 +127,7 @@ impl App {
                 // grid.populate_mines_with_rng(loc, mines, &mut rng);
                 grid.populate_mines(loc, mines);
                 print!("Initialized");
+                self.started = Some(self.now);
                 Started(grid)
             }
             (RevealClick(loc), Started(mut grid)) => {

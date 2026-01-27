@@ -56,7 +56,7 @@ static FLAG_HANDLE: LazyLock<image::Handle> =
 static FACE_HANDLES: LazyLock<[image::Handle; 2]> = LazyLock::new(|| FACE_BYTES.map(create_handle));
 
 pub fn get_clock_image(number: usize) -> Image {
-    create_image(&CLOCK_HANDLES[number])
+    create_image(&CLOCK_HANDLES[number]).height(40).width(23)
 }
 
 pub fn get_cell_image(number: usize) -> Image {
@@ -72,7 +72,7 @@ pub fn get_mine_image() -> Image {
 }
 
 pub fn get_flag_image() -> Image {
-    create_image(&FLAG_HANDLE)
+    create_image(&FLAG_HANDLE).height(40).width(40)
 }
 
 pub fn get_minus_image() -> Image {
@@ -88,4 +88,6 @@ pub enum Face {
 
 pub fn get_face_image(face: Face) -> Image {
     create_image(&FACE_HANDLES[face as usize])
+        .height(40)
+        .width(40)
 }
